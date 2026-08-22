@@ -181,7 +181,7 @@ const modeSelectEl = document.getElementById("mode-select");
 const modeDescEl = document.getElementById("mode-desc");
 const statusEl = document.getElementById("status");
 const attemptsEl = document.getElementById("attempts-left");
-const playAgainBtn = document.getElementById("play-again");
+const playAgainBtns = document.querySelectorAll(".play-again");
 
 const mixUiEl = document.getElementById("mix-ui");
 const mixSwatchEl = document.getElementById("mix-swatch");
@@ -242,7 +242,7 @@ function startRound(random) {
 
   state.guesses = [];
   state.gameOver = false;
-  playAgainBtn.classList.remove("show");
+  playAgainBtns.forEach(b => b.classList.remove("show"));
   showStatus("");
 
   if (info.kind === "mix") {
@@ -270,7 +270,7 @@ function startRound(random) {
   }
 }
 
-playAgainBtn.addEventListener("click", () => startRound(true));
+playAgainBtns.forEach(b => b.addEventListener("click", () => startRound(true)));
 
 // ============================================================
 // MIX MODE UI
@@ -368,7 +368,7 @@ mixGuessBtn.addEventListener("click", () => {
 
 function endMixGame(won) {
   state.gameOver = true;
-  playAgainBtn.classList.add("show");
+  playAgainBtns.forEach(b => b.classList.add("show"));
   const cfg = MIX_CONFIG[state.mode];
   const names = state.mixAnswer.map((id, i) => `${cfg.tierLabels[i]}: ${PALETTE[id].id}`).join(", ");
   showStatus(won ? "Solved! 🎉" : `The mix was ${names}`);
@@ -426,7 +426,7 @@ hexFormEl.addEventListener("submit", (e) => {
 function endHexGame(won) {
   state.gameOver = true;
   hexInputEl.disabled = true;
-  playAgainBtn.classList.add("show");
+  playAgainBtns.forEach(b => b.classList.add("show"));
   hexLabelEl.textContent = toHex(state.hexAnswer);
   showStatus(won ? "Solved! 🎉" : `The color was ${toHex(state.hexAnswer)}`);
 }

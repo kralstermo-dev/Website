@@ -859,9 +859,19 @@ button:focus-visible,
   padding: 1px 4px;
 }
 
+.mix-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.mix-actions .play-again {
+  margin-top: 0;
+  height: 41px;
+}
+
 .mix-guess-btn {
-  display: block;
-  margin: 0 auto 22px;
   background: var(--accent);
   color: #14171c;
   border: none;
@@ -871,6 +881,7 @@ button:focus-visible,
   font-family: var(--font-mono);
   font-size: 13px;
   cursor: pointer;
+  height: 41px;
 }
 .mix-guess-btn:disabled { opacity: 0.4; cursor: default; }
 
@@ -924,7 +935,7 @@ button:focus-visible,
    ============================================================ */
 
 .angle-diagram {
-  width: min(300px, 88vw);
+  width: min(360px, 92vw);
   aspect-ratio: 1;
   margin: 0 auto 10px;
   border: 2px solid var(--line);

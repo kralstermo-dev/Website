@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Colorfle | Daily Games</title>
-<link rel="stylesheet" href="../../../styles/main.css?v=7">
+<link rel="stylesheet" href="../../../styles/main.css?v=9">
 </head>
 <body>
 
@@ -28,7 +28,10 @@
     <div id="mix-swatch" class="cf-main-swatch"></div>
 
     <div id="mix-slots" class="mix-slots"></div>
-    <button id="mix-guess-btn" type="button" class="mix-guess-btn" disabled>Guess</button>
+    <div class="mix-actions">
+      <button id="mix-guess-btn" type="button" class="mix-guess-btn" disabled>Guess</button>
+      <button type="button" class="play-again">Play random</button>
+    </div>
 
     <div id="mix-palette" class="mix-palette"></div>
 
@@ -51,14 +54,13 @@
           required>
       </div>
       <button type="submit">Guess</button>
+      <button type="button" class="play-again">Play random</button>
     </form>
 
     <div id="hex-guess-list" class="guess-list"></div>
   </div>
-
-  <button id="play-again" type="button" class="play-again">Play random</button>
 </div>
 
-<script src="game.js?v=7"></script>
+<script src="game.js?v=9"></script>
 </body>
 </html>

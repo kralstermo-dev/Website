@@ -1,9 +1,10 @@
 // ============================================================
 // ANGLE - guess the degree measure of the angle shown
 // Two rays from a shared vertex form an angle with no markings - you
-// guess its measure in degrees. Feedback is tiered closeness (same
-// idea as Colorfle's Impossible mode) plus each past guess's ray gets
-// drawn on the diagram so you can visually compare where you've been.
+// guess its measure in degrees. Feedback is a tiered higher/lower hint
+// (color shows how close, arrow shows which way to adjust) plus each
+// past guess's ray gets drawn on the diagram so you can visually
+// compare where you've been.
 // ============================================================
 
 const MAX_GUESSES = 6;
@@ -39,8 +40,12 @@ function angularDiff(a, b) {
   return d > 180 ? 360 - d : d;
 }
 
-function proximityPct(diff) {
-  return Math.max(0, Math.round(100 - (diff / 180) * 100));
+// Which way (in guessed degrees) gets you to the answer fastest.
+function angularDirection(guess, answer) {
+  let d = (answer - guess) % 360;
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+  return d; // positive = guess higher next time, negative = guess lower
 }
 
 function tierFor(diff) {
@@ -76,35 +81,34 @@ function showStatus(msg, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-// Vertex + ray geometry. Ray 1 is fixed pointing straight up so every
-// puzzle is visually anchored the same way; only ray 2's position (and
-// so the angle between them) actually varies.
-const CX = 150, CY = 260, R = 220;
+// Vertex centered in the viewBox so a ray can point in ANY direction
+// without ever getting clipped by the box edges.
+const CX = 150, CY = 150, R = 130;
 const RAY1_DEG = 90; // straight up, math convention (0 = right, 90 = up)
+const VERTEX_CIRCLE_R = 40;
 
-function rayEndpoint(deg) {
+function rayEndpoint(deg, radius = R) {
   const rad = (deg * Math.PI) / 180;
-  return { x: CX + R * Math.cos(rad), y: CY - R * Math.sin(rad) };
+  return { x: CX + radius * Math.cos(rad), y: CY - radius * Math.sin(rad) };
 }
 
-function buildDiagramSvg(revealAnswer) {
+// The target angle's two rays are always visible - Angle is a visual
+// estimation game, not a hidden-answer one like Wordle/Flagle, so there's
+// nothing to "reveal" later.
+function buildDiagramSvg() {
   const ray1 = rayEndpoint(RAY1_DEG);
-  const ray2Deg = RAY1_DEG - state.answer;
-  const ray2 = rayEndpoint(ray2Deg);
+  const ray2 = rayEndpoint(RAY1_DEG - state.answer);
 
   const guessRays = state.guesses.map(g => {
-    const deg = RAY1_DEG - g.value;
-    const p = rayEndpoint(deg);
+    const p = rayEndpoint(RAY1_DEG - g.value);
     return `<line x1="${CX}" y1="${CY}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="${TIER_COLOR_VAR[g.tier]}" stroke-width="3" stroke-linecap="round" opacity="0.85" />`;
   }).join("");
 
   return `
     <svg viewBox="0 0 300 300" width="100%" height="100%">
-      <line x1="${CX}" y1="${CY}" x2="${ray1.x.toFixed(1)}" y2="${ray1.y.toFixed(1)}" stroke="var(--ink)" stroke-width="4" stroke-linecap="round" />
-      ${revealAnswer
-        ? `<line x1="${CX}" y1="${CY}" x2="${ray2.x.toFixed(1)}" y2="${ray2.y.toFixed(1)}" stroke="var(--ink)" stroke-width="4" stroke-linecap="round" />`
-        : ""
-      }
+      <circle cx="${CX}" cy="${CY}" r="${VERTEX_CIRCLE_R}" fill="none" stroke="var(--accent-2)" stroke-width="2" opacity="0.7" />
+      <line x1="${CX}" y1="${CY}" x2="${ray1.x.toFixed(1)}" y2="${ray1.y.toFixed(1)}" stroke="var(--danger)" stroke-width="4" stroke-linecap="round" />
+      <line x1="${CX}" y1="${CY}" x2="${ray2.x.toFixed(1)}" y2="${ray2.y.toFixed(1)}" stroke="var(--danger)" stroke-width="4" stroke-linecap="round" />
       ${guessRays}
       <circle cx="${CX}" cy="${CY}" r="4" fill="var(--ink)" />
     </svg>
@@ -112,18 +116,18 @@ function buildDiagramSvg(revealAnswer) {
 }
 
 function renderDiagram() {
-  diagramEl.innerHTML = buildDiagramSvg(state.gameOver);
+  diagramEl.innerHTML = buildDiagramSvg();
 }
 renderDiagram();
 attemptsEl.textContent = `${MAX_GUESSES - state.guesses.length} guesses left`;
 
-function renderGuessRow(value, diff, pct, tier, isCorrect) {
+function renderGuessRow(value, tier, isCorrect, direction) {
   const row = document.createElement("div");
   row.className = "angle-row" + (isCorrect ? " correct" : "");
+  const label = isCorrect ? "Correct!" : (direction > 0 ? "Higher &uarr;" : "Lower &darr;");
   row.innerHTML = `
     <span class="angle-value">${value}&deg;</span>
-    <span class="cf-channel cf-${tier}">${isCorrect ? "exact" : `${diff}&deg; off`}</span>
-    <span class="cf-pct">${pct}%</span>
+    <span class="cf-channel cf-${tier}">${label}</span>
   `;
   guessList.prepend(row);
 }
@@ -141,13 +145,13 @@ guessForm.addEventListener("submit", (e) => {
 
   showStatus("");
   const diff = angularDiff(value, state.answer);
-  const pct = proximityPct(diff);
+  const direction = angularDirection(value, state.answer);
   const tier = tierFor(diff);
   const isCorrect = diff === 0;
 
   state.guesses.push({ value, tier });
   guessInput.value = "";
-  renderGuessRow(value, diff, pct, tier, isCorrect);
+  renderGuessRow(value, tier, isCorrect, direction);
   renderDiagram();
 
   if (isCorrect) {
@@ -165,7 +169,6 @@ function endGame(won) {
   state.gameOver = true;
   guessInput.disabled = true;
   playAgainBtn.classList.add("show");
-  renderDiagram();
   showStatus(won ? "Solved! 🎉" : `The angle was ${state.answer}\u00b0`);
 }
 
@@ -181,3 +184,4 @@ playAgainBtn.addEventListener("click", () => {
   attemptsEl.textContent = `${MAX_GUESSES - state.guesses.length} guesses left`;
   renderDiagram();
 });
+
