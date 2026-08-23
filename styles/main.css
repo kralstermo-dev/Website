@@ -317,6 +317,8 @@ button:focus-visible,
 
 .letterle-grid {
   width: 62px;
+  grid-template-rows: none;
+  grid-auto-rows: min-content;
 }
 .letterle-grid .grid-row {
   grid-template-columns: 1fr;

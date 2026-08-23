@@ -1,13 +1,12 @@
 // ============================================================
-// LETTERLE - Wordle, but the "word" is a single letter
-// Same grid/keyboard/scoring machinery as Wordle, just WORD_LENGTH = 1.
-// With only one slot, scoring reduces to correct/absent (no "present" -
-// there's nowhere else in a 1-letter word for a letter to be "elsewhere").
+// LETTERLE - Wordle, but the "word" is a single letter, and there's
+// no guess cap. The board starts with one empty box; each guess fills
+// that box in and a fresh empty box appears below it for the next try.
+// With only one slot, scoring reduces to correct/absent - there's
+// nowhere else in a 1-letter word for a letter to be "elsewhere".
 // The keyboard turning gray as you eliminate letters is the whole game.
 // ============================================================
 
-const WORD_LENGTH = 1;
-const MAX_GUESSES = 6;
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
 
 // Pick today's letter deterministically, so everyone playing today
@@ -22,8 +21,6 @@ function getTodaysLetter() {
 const state = {
   answer: getTodaysLetter(),
   row: 0,
-  col: 0,
-  guesses: Array.from({ length: MAX_GUESSES }, () => Array(WORD_LENGTH).fill("")),
   gameOver: false,
   submittedLetters: [],
 };
@@ -32,19 +29,20 @@ const gridEl = document.getElementById("grid");
 const statusEl = document.getElementById("status");
 const playAgainBtn = document.getElementById("play-again");
 
+// Starts the board over with exactly one empty box.
 function buildGrid() {
   gridEl.innerHTML = "";
-  for (let r = 0; r < MAX_GUESSES; r++) {
-    const rowEl = document.createElement("div");
-    rowEl.className = "grid-row";
-    for (let c = 0; c < WORD_LENGTH; c++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.id = `cell-${r}-${c}`;
-      rowEl.appendChild(cell);
-    }
-    gridEl.appendChild(rowEl);
-  }
+  addRow(0);
+}
+
+function addRow(r) {
+  const rowEl = document.createElement("div");
+  rowEl.className = "grid-row";
+  const cell = document.createElement("div");
+  cell.className = "cell";
+  cell.id = `cell-${r}-0`;
+  rowEl.appendChild(cell);
+  gridEl.appendChild(rowEl);
 }
 buildGrid();
 
@@ -73,13 +71,16 @@ function buildKeyboard() {
 }
 buildKeyboard();
 
+// The current guess-in-progress letter (not yet submitted).
+let pendingLetter = "";
+
 function handleKey(key) {
   if (state.gameOver) return;
 
   if (key === "back") {
-    if (state.col > 0) {
-      state.col--;
-      setCellLetter(state.row, state.col, "");
+    if (pendingLetter) {
+      pendingLetter = "";
+      setCellLetter(state.row, "");
     }
     return;
   }
@@ -89,15 +90,14 @@ function handleKey(key) {
     return;
   }
 
-  if (/^[a-z]$/.test(key) && state.col < WORD_LENGTH) {
-    setCellLetter(state.row, state.col, key);
-    state.col++;
+  if (/^[a-z]$/.test(key) && !pendingLetter) {
+    pendingLetter = key;
+    setCellLetter(state.row, key);
   }
 }
 
-function setCellLetter(r, c, letter) {
-  state.guesses[r][c] = letter;
-  const cellEl = document.getElementById(`cell-${r}-${c}`);
+function setCellLetter(r, letter) {
+  const cellEl = document.getElementById(`cell-${r}-0`);
   cellEl.textContent = letter;
   cellEl.classList.toggle("filled", letter !== "");
   if (letter) {
@@ -112,23 +112,21 @@ function showStatus(msg, isError = false) {
 }
 
 function shake(row) {
-  for (let c = 0; c < WORD_LENGTH; c++) {
-    document.getElementById(`cell-${row}-${c}`).animate(
-      [{ transform: "translateX(0)" }, { transform: "translateX(-4px)" },
-       { transform: "translateX(4px)" }, { transform: "translateX(0)" }],
-      { duration: 200 }
-    );
-  }
+  document.getElementById(`cell-${row}-0`).animate(
+    [{ transform: "translateX(0)" }, { transform: "translateX(-4px)" },
+     { transform: "translateX(4px)" }, { transform: "translateX(0)" }],
+    { duration: 200 }
+  );
 }
 
 function submitGuess() {
-  if (state.col < WORD_LENGTH) {
+  if (!pendingLetter) {
     showStatus("Pick a letter first", true);
     shake(state.row);
     return;
   }
 
-  const guess = state.guesses[state.row].join("");
+  const guess = pendingLetter;
 
   if (state.submittedLetters.includes(guess)) {
     showStatus("Already guessed that letter", true);
@@ -138,23 +136,18 @@ function submitGuess() {
 
   const result = scoreGuess(guess, state.answer);
   state.submittedLetters.push(guess);
-  revealRow(state.row, result, guess);
+  revealCell(state.row, result[0], guess);
 
   if (guess === state.answer) {
     state.gameOver = true;
-    setTimeout(() => showStatus("Solved! 🎉"), MAX_GUESSES * 80 + 500);
+    setTimeout(() => showStatus("Solved! 🎉"), 500);
     endGame();
     return;
   }
 
   state.row++;
-  state.col = 0;
-
-  if (state.row === MAX_GUESSES) {
-    state.gameOver = true;
-    setTimeout(() => showStatus(`The letter was "${state.answer.toUpperCase()}"`), 500);
-    endGame();
-  }
+  pendingLetter = "";
+  addRow(state.row); // no guess cap - just keep growing the board
 }
 
 // Same scoring shape as Wordle for consistency, even though with only one
@@ -163,18 +156,12 @@ function scoreGuess(guess, answer) {
   return guess === answer ? ["correct"] : ["absent"];
 }
 
-function revealRow(row, result, guess) {
-  for (let c = 0; c < WORD_LENGTH; c++) {
-    const cell = document.getElementById(`cell-${row}-${c}`);
-    setTimeout(() => {
-      cell.classList.add("flip");
-      cell.style.setProperty("--tile-color",
-        result[c] === "correct" ? "var(--correct)" :
-        result[c] === "present" ? "var(--present)" : "#2a2e38");
-      cell.classList.add(result[c]);
-      updateKeyboardKey(guess[c], result[c]);
-    }, c * 220);
-  }
+function revealCell(row, result, guess) {
+  const cell = document.getElementById(`cell-${row}-0`);
+  cell.classList.add("flip");
+  cell.style.setProperty("--tile-color", result === "correct" ? "var(--correct)" : "#2a2e38");
+  cell.classList.add(result);
+  updateKeyboardKey(guess, result);
 }
 
 const keyStatus = {};
@@ -204,10 +191,9 @@ document.addEventListener("keydown", (e) => {
 playAgainBtn.addEventListener("click", () => {
   state.answer = ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
   state.row = 0;
-  state.col = 0;
   state.gameOver = false;
-  state.guesses = Array.from({ length: MAX_GUESSES }, () => Array(WORD_LENGTH).fill(""));
   state.submittedLetters = [];
+  pendingLetter = "";
   Object.keys(keyStatus).forEach(k => delete keyStatus[k]);
   document.querySelectorAll(".key").forEach(k => k.classList.remove("correct", "present", "absent"));
   playAgainBtn.classList.remove("show");
