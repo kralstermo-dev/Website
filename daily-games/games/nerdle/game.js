@@ -195,6 +195,7 @@ const state = {
   col: 0,
   guesses: Array.from({ length: MAX_GUESSES }, () => Array(EQ_LENGTH).fill("")),
   gameOver: false,
+  submittedEquations: [],
 };
 state.answer = getTodaysEquation(state.mode);
 
@@ -309,7 +310,14 @@ function submitGuess() {
     return;
   }
 
+  if (state.submittedEquations.includes(guess)) {
+    showStatus("Already guessed that equation", true);
+    shake(state.row);
+    return;
+  }
+
   const result = scoreGuess(guess, state.answer);
+  state.submittedEquations.push(guess);
   revealRow(state.row, result, guess);
 
   if (guess === state.answer) {
@@ -427,6 +435,7 @@ function resetRound(random) {
   state.col = 0;
   state.gameOver = false;
   state.guesses = Array.from({ length: MAX_GUESSES }, () => Array(EQ_LENGTH).fill(""));
+  state.submittedEquations = [];
   Object.keys(keyStatus).forEach(k => delete keyStatus[k]);
   document.querySelectorAll(".key").forEach(k => k.classList.remove("correct", "present", "absent"));
   playAgainBtn.classList.remove("show");

@@ -1,10 +1,10 @@
 // ============================================================
 // ANGLE - guess the degree measure of the angle shown
 // Two rays from a shared vertex form an angle with no markings - you
-// guess its measure in degrees. Feedback is a tiered higher/lower hint
-// (color shows how close, arrow shows which way to adjust) plus each
-// past guess's ray gets drawn on the diagram so you can visually
-// compare where you've been.
+// guess its measure in degrees. The pair can face any direction (not
+// anchored to a fixed axis), and a small arc between them marks the
+// swept angle. Feedback is a warmer/colder tier plus a direction hint
+// (which way to adjust your next guess).
 // ============================================================
 
 const MAX_GUESSES = 6;
@@ -24,15 +24,22 @@ function dayIndex(offset) {
   return Math.floor((today - start) / (1000 * 60 * 60 * 24)) + offset;
 }
 
-// Kept away from 0/360 (degenerate, rays overlap) and comfortably off
-// straight-line territory too, so every angle actually looks like one.
+// angle: kept away from 0/360 (degenerate, rays overlap) so it always
+// looks like a real angle. rotation: where the whole pair points, so
+// the diagram isn't always anchored the same way.
 function getTodaysAngle() {
   const rng = mulberry32(dayIndex(452));
-  return 5 + Math.floor(rng() * 351); // 5..355
+  return {
+    angle: 5 + Math.floor(rng() * 351), // 5..355
+    rotation: Math.floor(rng() * 360),
+  };
 }
 
 function randomAngle() {
-  return 5 + Math.floor(Math.random() * 351);
+  return {
+    angle: 5 + Math.floor(Math.random() * 351),
+    rotation: Math.floor(Math.random() * 360),
+  };
 }
 
 function angularDiff(a, b) {
@@ -50,16 +57,15 @@ function angularDirection(guess, answer) {
 
 function tierFor(diff) {
   if (diff === 0) return "correct";
-  if (diff <= 5) return "close";
-  if (diff <= 20) return "warm";
+  if (diff <= 10) return "close";
+  if (diff <= 30) return "warm";
   return "cold";
 }
 
-const TIER_COLOR_VAR = {
-  correct: "var(--correct)",
-  close: "var(--present)",
-  warm: "var(--accent)",
-  cold: "#5a5f6b",
+const TIER_LABEL = {
+  close: "Getting Hot",
+  warm: "Getting Warm",
+  cold: "Getting Cold",
 };
 
 const state = {
@@ -84,39 +90,40 @@ function showStatus(msg, isError = false) {
 // Vertex centered in the viewBox so a ray can point in ANY direction
 // without ever getting clipped by the box edges.
 const CX = 150, CY = 150, R = 130;
-const RAY1_DEG = 90; // straight up, math convention (0 = right, 90 = up)
-const VERTEX_CIRCLE_R = 40;
+const ARC_R = 42;
 
 function rayEndpoint(deg, radius = R) {
   const rad = (deg * Math.PI) / 180;
   return { x: CX + radius * Math.cos(rad), y: CY - radius * Math.sin(rad) };
 }
 
+// A small arc between the two rays (not a full circle) marking the
+// swept angle - matches how a protractor shows an angle.
+function arcPath(ray1Deg, ray2Deg, angleDeg) {
+  const p1 = rayEndpoint(ray1Deg, ARC_R);
+  const p2 = rayEndpoint(ray2Deg, ARC_R);
+  const largeArcFlag = angleDeg > 180 ? 1 : 0;
+  return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A ${ARC_R} ${ARC_R} 0 ${largeArcFlag} 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+}
+
 // The target angle's two rays are always visible - Angle is a visual
-// estimation game, not a hidden-answer one like Wordle/Flagle, so there's
-// nothing to "reveal" later.
-function buildDiagramSvg() {
-  const ray1 = rayEndpoint(RAY1_DEG);
-  const ray2 = rayEndpoint(RAY1_DEG - state.answer);
+// estimation game, not a hidden-answer one like Wordle/Flagle, so
+// there's nothing to reveal later. Past guesses are NOT drawn on the
+// diagram - only the puzzle itself shows.
+function renderDiagram() {
+  const ray1Deg = state.answer.rotation;
+  const ray2Deg = state.answer.rotation - state.answer.angle;
+  const ray1 = rayEndpoint(ray1Deg);
+  const ray2 = rayEndpoint(ray2Deg);
 
-  const guessRays = state.guesses.map(g => {
-    const p = rayEndpoint(RAY1_DEG - g.value);
-    return `<line x1="${CX}" y1="${CY}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="${TIER_COLOR_VAR[g.tier]}" stroke-width="3" stroke-linecap="round" opacity="0.85" />`;
-  }).join("");
-
-  return `
+  diagramEl.innerHTML = `
     <svg viewBox="0 0 300 300" width="100%" height="100%">
-      <circle cx="${CX}" cy="${CY}" r="${VERTEX_CIRCLE_R}" fill="none" stroke="var(--accent-2)" stroke-width="2" opacity="0.7" />
+      <path d="${arcPath(ray1Deg, ray2Deg, state.answer.angle)}" fill="none" stroke="var(--accent-2)" stroke-width="2" opacity="0.8" />
       <line x1="${CX}" y1="${CY}" x2="${ray1.x.toFixed(1)}" y2="${ray1.y.toFixed(1)}" stroke="var(--danger)" stroke-width="4" stroke-linecap="round" />
       <line x1="${CX}" y1="${CY}" x2="${ray2.x.toFixed(1)}" y2="${ray2.y.toFixed(1)}" stroke="var(--danger)" stroke-width="4" stroke-linecap="round" />
-      ${guessRays}
       <circle cx="${CX}" cy="${CY}" r="4" fill="var(--ink)" />
     </svg>
   `;
-}
-
-function renderDiagram() {
-  diagramEl.innerHTML = buildDiagramSvg();
 }
 renderDiagram();
 attemptsEl.textContent = `${MAX_GUESSES - state.guesses.length} guesses left`;
@@ -124,10 +131,13 @@ attemptsEl.textContent = `${MAX_GUESSES - state.guesses.length} guesses left`;
 function renderGuessRow(value, tier, isCorrect, direction) {
   const row = document.createElement("div");
   row.className = "angle-row" + (isCorrect ? " correct" : "");
-  const label = isCorrect ? "Correct!" : (direction > 0 ? "Higher &uarr;" : "Lower &darr;");
+  const dirIcon = direction > 0 ? "&uarr;" : "&darr;";
   row.innerHTML = `
     <span class="angle-value">${value}&deg;</span>
-    <span class="cf-channel cf-${tier}">${label}</span>
+    ${isCorrect
+      ? `<span class="cf-channel cf-correct">Correct!</span>`
+      : `<span class="angle-feedback"><span class="angle-dir">${dirIcon}</span><span class="cf-channel cf-${tier}">${TIER_LABEL[tier]}</span></span>`
+    }
   `;
   guessList.prepend(row);
 }
@@ -143,16 +153,20 @@ guessForm.addEventListener("submit", (e) => {
     return;
   }
 
+  if (state.guesses.some(g => g.value === value)) {
+    showStatus("Already guessed that angle", true);
+    return;
+  }
+
   showStatus("");
-  const diff = angularDiff(value, state.answer);
-  const direction = angularDirection(value, state.answer);
+  const diff = angularDiff(value, state.answer.angle);
+  const direction = angularDirection(value, state.answer.angle);
   const tier = tierFor(diff);
   const isCorrect = diff === 0;
 
   state.guesses.push({ value, tier });
   guessInput.value = "";
   renderGuessRow(value, tier, isCorrect, direction);
-  renderDiagram();
 
   if (isCorrect) {
     endGame(true);
@@ -169,7 +183,7 @@ function endGame(won) {
   state.gameOver = true;
   guessInput.disabled = true;
   playAgainBtn.classList.add("show");
-  showStatus(won ? "Solved! 🎉" : `The angle was ${state.answer}\u00b0`);
+  showStatus(won ? "Solved! 🎉" : `The angle was ${state.answer.angle}\u00b0`);
 }
 
 playAgainBtn.addEventListener("click", () => {
@@ -184,4 +198,3 @@ playAgainBtn.addEventListener("click", () => {
   attemptsEl.textContent = `${MAX_GUESSES - state.guesses.length} guesses left`;
   renderDiagram();
 });
-

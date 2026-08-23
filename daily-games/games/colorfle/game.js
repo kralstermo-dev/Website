@@ -36,8 +36,9 @@ function toHex({ r, g, b }) {
 function proximityPct(a, b) {
   const dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
   const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+  if (dist === 0) return 100;
   const maxDist = Math.sqrt(3 * 255 * 255);
-  return Math.max(0, Math.round(100 - (dist / maxDist) * 100));
+  return Math.min(99, Math.max(0, Math.round(100 - (dist / maxDist) * 100)));
 }
 
 function dayIndex(offset) {
@@ -63,8 +64,8 @@ const PALETTE = [
 ];
 
 const MIX_CONFIG = {
-  normal: { n: 3, tiers: [0.2, 0.3, 0.5], tierLabels: ["Small", "Medium", "Large"], dayOffset: 301 },
-  hard:   { n: 4, tiers: [0.1, 0.2, 0.3, 0.4], tierLabels: ["Small", "Medium", "Large", "XL"], dayOffset: 377 },
+  normal: { n: 3, tiers: [0.5, 0.3, 0.2], tierLabels: ["Large", "Medium", "Small"], dayOffset: 301 },
+  hard:   { n: 4, tiers: [0.4, 0.3, 0.2, 0.1], tierLabels: ["XL", "Large", "Medium", "Small"], dayOffset: 377 },
 };
 
 function pickNDistinct(rng, n) {
@@ -342,11 +343,18 @@ mixGuessBtn.addEventListener("click", () => {
 
   const cfg = MIX_CONFIG[state.mode];
   const guessIds = state.mixSlots.slice();
+
+  if (state.guesses.some(g => g.join(",") === guessIds.join(","))) {
+    showStatus("Already guessed that combination", true);
+    return;
+  }
+
   const feedback = scoreMixGuess(guessIds, state.mixAnswer);
   const blended = blendMix(guessIds, cfg.tiers);
   const answerBlended = blendMix(state.mixAnswer, cfg.tiers);
   const pct = proximityPct(blended, answerBlended);
 
+  showStatus("");
   state.guesses.push(guessIds);
   renderMixGuessRow(guessIds, feedback, blended, pct);
 
@@ -401,6 +409,12 @@ hexFormEl.addEventListener("submit", (e) => {
   const guessColor = parseHex(hexInputEl.value);
   if (!guessColor) {
     showStatus("Enter a 6-digit hex code, like 3fae02", true);
+    return;
+  }
+
+  const guessHex = toHex(guessColor);
+  if (state.guesses.some(g => toHex(g) === guessHex)) {
+    showStatus("Already guessed that color", true);
     return;
   }
 
