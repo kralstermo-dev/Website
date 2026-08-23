@@ -44,6 +44,13 @@ function addRow(r) {
   rowEl.appendChild(cell);
   gridEl.appendChild(rowEl);
 }
+
+// As the board grows past a handful of guesses it can run longer than the
+// viewport - keep the newest box (and eventually the keyboard/play-again
+// button) in view instead of making the player scroll down manually.
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
 buildGrid();
 
 const KEY_ROWS = [
@@ -140,14 +147,18 @@ function submitGuess() {
 
   if (guess === state.answer) {
     state.gameOver = true;
-    setTimeout(() => showStatus("Solved! 🎉"), 500);
+    const count = state.submittedLetters.length;
+    const guessWord = count === 1 ? "guess" : "guesses";
+    setTimeout(() => showStatus(`Solved! 🎉 (${count} ${guessWord})`), 500);
     endGame();
+    scrollToBottom();
     return;
   }
 
   state.row++;
   pendingLetter = "";
   addRow(state.row); // no guess cap - just keep growing the board
+  scrollToBottom();
 }
 
 // Same scoring shape as Wordle for consistency, even though with only one
@@ -199,4 +210,5 @@ playAgainBtn.addEventListener("click", () => {
   playAgainBtn.classList.remove("show");
   showStatus("");
   buildGrid();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
