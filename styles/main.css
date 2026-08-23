@@ -315,6 +315,13 @@ button:focus-visible,
   font-size: 18px;
 }
 
+.letterle-grid {
+  width: 62px;
+}
+.letterle-grid .grid-row {
+  grid-template-columns: 1fr;
+}
+
 .keyboard {
   display: flex;
   flex-direction: column;

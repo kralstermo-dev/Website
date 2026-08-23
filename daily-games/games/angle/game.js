@@ -62,12 +62,6 @@ function tierFor(diff) {
   return "cold";
 }
 
-const TIER_LABEL = {
-  close: "Getting Hot",
-  warm: "Getting Warm",
-  cold: "Getting Cold",
-};
-
 const state = {
   answer: getTodaysAngle(),
   guesses: [],
@@ -131,13 +125,10 @@ attemptsEl.textContent = `${MAX_GUESSES - state.guesses.length} guesses left`;
 function renderGuessRow(value, tier, isCorrect, direction) {
   const row = document.createElement("div");
   row.className = "angle-row" + (isCorrect ? " correct" : "");
-  const dirIcon = direction > 0 ? "&uarr;" : "&darr;";
+  const dirLabel = direction > 0 ? "Higher &uarr;" : "Lower &darr;";
   row.innerHTML = `
     <span class="angle-value">${value}&deg;</span>
-    ${isCorrect
-      ? `<span class="cf-channel cf-correct">Correct!</span>`
-      : `<span class="angle-feedback"><span class="angle-dir">${dirIcon}</span><span class="cf-channel cf-${tier}">${TIER_LABEL[tier]}</span></span>`
-    }
+    <span class="cf-channel cf-${tier}">${isCorrect ? "Correct!" : dirLabel}</span>
   `;
   guessList.prepend(row);
 }
