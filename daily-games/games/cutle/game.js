@@ -2,17 +2,16 @@
 // CUTLE - slice a random shape into two equal halves
 // A convex "blob" is generated each day (seeded, like the other
 // dailies) or freshly for a random round. Drag a straight line across
-// it and the game clips the shape along that line to report what
-// percentage of the area landed on each side. Get as close to a
+// it - starting and ending outside the shape, like a real knife
+// stroke - and the game clips the shape along that line to report
+// what percentage of the area landed on each side. Get as close to a
 // 50/50 split as you can within 5 cuts.
 // ============================================================
 
 const MAX_GUESSES = 5;
 const CX = 150, CY = 150;
 const SHAPE_R = 110;
-// Box the drawn line gets extended to, purely for drawing a full cut
-// across the diagram - a little inset from the 300x300 viewBox.
-const BOX = { minX: 10, minY: 10, maxX: 290, maxY: 290 };
+const SLICE_OFFSET = 14; // px the two halves pop apart on a committed cut
 
 function mulberry32(seed) {
   return function () {
@@ -97,30 +96,18 @@ function clipHalf(poly, a, b, keepPositive) {
   return out;
 }
 
-// Extends the drawn line out to the edges of the diagram box, purely
-// so the cut is drawn all the way across the canvas.
-function lineToBoxSegment(a, b) {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  let t0 = -Infinity, t1 = Infinity;
-  if (dx !== 0) {
-    let tx1 = (BOX.minX - a.x) / dx, tx2 = (BOX.maxX - a.x) / dx;
-    if (tx1 > tx2) [tx1, tx2] = [tx2, tx1];
-    t0 = Math.max(t0, tx1); t1 = Math.min(t1, tx2);
-  } else if (a.x < BOX.minX || a.x > BOX.maxX) {
-    return null;
+// Ray-casting point-in-polygon test, used to require that a cut starts
+// and ends outside the shape - like an actual knife stroke that
+// enters and exits, rather than a partial cut stranded inside it.
+function pointInPolygon(p, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
+    const intersects = (yi > p.y) !== (yj > p.y) &&
+      p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi;
+    if (intersects) inside = !inside;
   }
-  if (dy !== 0) {
-    let ty1 = (BOX.minY - a.y) / dy, ty2 = (BOX.maxY - a.y) / dy;
-    if (ty1 > ty2) [ty1, ty2] = [ty2, ty1];
-    t0 = Math.max(t0, ty1); t1 = Math.min(t1, ty2);
-  } else if (a.y < BOX.minY || a.y > BOX.maxY) {
-    return null;
-  }
-  if (t0 > t1) return null;
-  return {
-    p1: { x: a.x + t0 * dx, y: a.y + t0 * dy },
-    p2: { x: a.x + t1 * dx, y: a.y + t1 * dy },
-  };
+  return inside;
 }
 
 // ---------- shape generation ----------
@@ -161,7 +148,7 @@ const state = {
   area: 0,
   guesses: [],
   gameOver: false,
-  lastCut: null, // { seg, halfA, halfB } drawn after a committed cut
+  lastCut: null, // { a, b, halfA, halfB, settled } after a committed cut
 };
 state.area = polygonArea(state.shape);
 
@@ -236,6 +223,11 @@ function onPointerUp(e) {
     renderContent();
     return;
   }
+  if (pointInPolygon(start, state.shape) || pointInPolygon(end, state.shape)) {
+    showStatus("Start and end the drag outside the shape", true);
+    renderContent();
+    return;
+  }
   commitCut(start, end);
 }
 
@@ -246,17 +238,25 @@ function renderContent() {
   let lineSvg = "";
 
   if (dragState) {
-    const seg = lineToBoxSegment(dragState.start, dragState.current);
-    if (seg) {
-      lineSvg = `<line x1="${seg.p1.x.toFixed(1)}" y1="${seg.p1.y.toFixed(1)}" x2="${seg.p2.x.toFixed(1)}" y2="${seg.p2.y.toFixed(1)}" stroke="var(--ink-dim)" stroke-width="2" stroke-dasharray="6 5" />`;
-    }
+    // Only the literal segment the person is dragging - no extension.
+    const { start, current } = dragState;
+    lineSvg = `<line x1="${start.x.toFixed(1)}" y1="${start.y.toFixed(1)}" x2="${current.x.toFixed(1)}" y2="${current.y.toFixed(1)}" stroke="var(--ink-dim)" stroke-width="2" stroke-dasharray="6 5" />`;
   } else if (state.lastCut) {
-    const { seg, halfA, halfB } = state.lastCut;
+    const { a, b, halfA, halfB, settled } = state.lastCut;
+    // Perpendicular to the cut, so the two halves pop apart sideways.
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = -dy / len, py = dx / len;
+    const offA = settled ? { x: px * SLICE_OFFSET, y: py * SLICE_OFFSET } : { x: 0, y: 0 };
+    const offB = settled ? { x: -px * SLICE_OFFSET, y: -py * SLICE_OFFSET } : { x: 0, y: 0 };
+
     halvesSvg = `
-      <polygon points="${pointsAttr(halfA)}" fill="var(--accent)" opacity="0.55" />
-      <polygon points="${pointsAttr(halfB)}" fill="var(--accent-2)" opacity="0.55" />
+      <polygon id="cutle-half-a" points="${pointsAttr(halfA)}" fill="var(--accent)" opacity="0.55"
+        style="transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1); transform: translate(${offA.x.toFixed(2)}px, ${offA.y.toFixed(2)}px);" />
+      <polygon id="cutle-half-b" points="${pointsAttr(halfB)}" fill="var(--accent-2)" opacity="0.55"
+        style="transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1); transform: translate(${offB.x.toFixed(2)}px, ${offB.y.toFixed(2)}px);" />
     `;
-    lineSvg = `<line x1="${seg.p1.x.toFixed(1)}" y1="${seg.p1.y.toFixed(1)}" x2="${seg.p2.x.toFixed(1)}" y2="${seg.p2.y.toFixed(1)}" stroke="var(--danger)" stroke-width="3" stroke-linecap="round" />`;
+    lineSvg = `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="var(--danger)" stroke-width="3" stroke-linecap="round" />`;
   }
 
   contentEl.innerHTML = `
@@ -264,6 +264,14 @@ function renderContent() {
     ${halvesSvg}
     ${lineSvg}
   `;
+
+  // First render after a fresh cut: the halves were just drawn at
+  // translate(0,0) - nudge them apart on the next frame so the CSS
+  // transition actually animates the "slice open" pop.
+  if (state.lastCut && !state.lastCut.settled) {
+    state.lastCut.settled = true;
+    requestAnimationFrame(() => requestAnimationFrame(renderContent));
+  }
 }
 
 function commitCut(a, b) {
@@ -278,9 +286,8 @@ function commitCut(a, b) {
   const diff = 50 - smaller;
   const tier = tierFor(diff);
   const isCorrect = diff < 0.5;
-  const seg = lineToBoxSegment(a, b) || { p1: a, p2: b };
 
-  state.lastCut = { seg, halfA, halfB };
+  state.lastCut = { a, b, halfA, halfB, settled: false };
   state.guesses.push({ smaller, larger, diff, tier, isCorrect });
 
   renderContent();
@@ -311,7 +318,7 @@ function endGame(won) {
   state.gameOver = true;
   playAgainBtn.classList.add("show");
   if (won) {
-    showStatus("Sliced it clean! \uD83D\uDD2A");
+    showStatus("Sliced it clean!");
   } else {
     const best = state.guesses.reduce((b, g) => (g.diff < b.diff ? g : b), state.guesses[0]);
     showStatus(`Out of cuts - your best split was ${best.smaller.toFixed(1)}% / ${best.larger.toFixed(1)}%`);
