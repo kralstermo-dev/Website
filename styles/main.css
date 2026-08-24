@@ -970,3 +970,40 @@ button:focus-visible,
   font-weight: 700;
   min-width: 44px;
 }
+
+/* ============================================================
+   CUTLE
+   ============================================================ */
+
+.cutle-diagram {
+  width: min(360px, 92vw);
+  aspect-ratio: 1;
+  margin: 0 auto 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  cursor: crosshair;
+}
+
+.cutle-actions {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.cutle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.cutle-row.correct { border-color: var(--correct); }
+
+.cutle-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
