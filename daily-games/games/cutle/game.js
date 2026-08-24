@@ -200,6 +200,7 @@ function onPointerDown(e) {
   e.preventDefault();
   const p = toSvgPoint(e);
   dragState = { start: p, current: p };
+  state.lastCut = null; // starting a fresh cut - drop the old one's visuals
   svgEl.setPointerCapture(e.pointerId);
   showStatus("");
   renderContent();
