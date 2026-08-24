@@ -250,17 +250,19 @@ function renderContent() {
     const offA = settled ? { x: px * SLICE_OFFSET, y: py * SLICE_OFFSET } : { x: 0, y: 0 };
     const offB = settled ? { x: -px * SLICE_OFFSET, y: -py * SLICE_OFFSET } : { x: 0, y: 0 };
 
+    // Each half carries its own stroke (including the fresh cut edge,
+    // which is already part of its boundary from the clip) so the
+    // outline travels with the piece instead of staying behind.
     halvesSvg = `
-      <polygon id="cutle-half-a" points="${pointsAttr(halfA)}" fill="var(--accent)" opacity="0.55"
+      <polygon id="cutle-half-a" points="${pointsAttr(halfA)}" fill="var(--accent)" opacity="0.55" stroke="var(--ink)" stroke-width="2"
         style="transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1); transform: translate(${offA.x.toFixed(2)}px, ${offA.y.toFixed(2)}px);" />
-      <polygon id="cutle-half-b" points="${pointsAttr(halfB)}" fill="var(--accent-2)" opacity="0.55"
+      <polygon id="cutle-half-b" points="${pointsAttr(halfB)}" fill="var(--accent-2)" opacity="0.55" stroke="var(--ink)" stroke-width="2"
         style="transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1); transform: translate(${offB.x.toFixed(2)}px, ${offB.y.toFixed(2)}px);" />
     `;
-    lineSvg = `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="var(--danger)" stroke-width="3" stroke-linecap="round" />`;
   }
 
   contentEl.innerHTML = `
-    <polygon points="${shapePts}" fill="${state.lastCut ? "none" : "var(--bg-panel-hover)"}" stroke="var(--ink)" stroke-width="2" />
+    ${state.lastCut ? "" : `<polygon points="${shapePts}" fill="var(--bg-panel-hover)" stroke="var(--ink)" stroke-width="2" />`}
     ${halvesSvg}
     ${lineSvg}
   `;
