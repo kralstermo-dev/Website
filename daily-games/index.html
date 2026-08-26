@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Games | a library of daily puzzles</title>
-<link rel="stylesheet" href="../styles/main.css?v=11">
+<link rel="stylesheet" href="../styles/main.css?v=13">
 </head>
 <body>
 
@@ -66,11 +66,16 @@
         <p class="ticket-desc">Guess the secret word by semantic closeness.</p>
       </div>
 
-      <div class="ticket soon" aria-disabled="true">
-        <span class="ticket-eyebrow">Coming soon</span>
-        <h2 class="ticket-name">Conexo</h2>
-        <p class="ticket-desc">Find the secret word by guessing words close to it</p>
-      </div>
+      <a class="ticket live" href="games/connections/index.html">
+        <span class="ticket-eyebrow">Word groups</span>
+        <h2 class="ticket-name">Connections</h2>
+        <p class="ticket-desc">Find the four groups of four related words before you run out of guesses.</p>
+        <div class="mini-grid" aria-hidden="true">
+          <span class="mini-cell teal"></span>
+          <span class="mini-cell gold"></span>
+          <span class="mini-cell gray"></span>
+        </div>
+      </a>
 
       <div class="ticket soon" aria-disabled="true">
         <span class="ticket-eyebrow">Coming soon</span>

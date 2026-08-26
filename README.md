@@ -42,9 +42,12 @@ Impossible: Try To find the [hex code](https://en.wikipedia.org/wiki/Web_colors)
 Wordle but with one letter
 ## Angle
 Try to get the exact angle shown on screen
+## Cutle
+Drag a straight line across the randomly generated shape to try to slice it exactly in half. You get 5 cuts; each one shows the area split (e.g. 47.2% / 52.8%) and a warmer/colder rating. Nail a 50/50 split to win.
+## Connections
+Find the four hidden groups of four related words. Select four tiles and submit - a full match peels off as a colored banner, a wrong guess costs you one of your 4 mistakes.
 # Coming Soon:
 
 ### Contexto
 ### Globle
 ### Waffle
-### Cutle
