@@ -1,14 +1,12 @@
 // ============================================================
-// GLOBLE - guess the country. Every guess plots on a simple lat/lng
-// map, colored by how close it is to the answer (blue = far,
-// red/gold = close), so the heat pattern builds up around the real
-// location as you narrow in. No guess cap - keep going until you find it.
-//
-// Note: this uses a plain lat/lng grid, not an actual world map with
-// country borders (no map dataset bundled here) - countries are plotted
-// as dots at their approximate center, reusing the same coordinates
-// Flagle already has in ../flagle/countries.js.
+// GLOBLE - 3D rotating globe
+// Three.js renders a textured Earth sphere. Guesses plot as
+// colored dots on the surface (blue = far, red = close, green =
+// correct). The globe auto-spins until the first guess is made,
+// then stops - player can drag to rotate manually.
 // ============================================================
+
+// ---------- geo math (shared with Flagle) ----------
 
 function dayIndex(offset) {
   const start = new Date(2024, 0, 1);
@@ -27,102 +25,195 @@ function distanceKm(a, b) {
   const R = 6371;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)));
+  const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h)));
 }
 
 function bearingDeg(a, b) {
   const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
   const dLng = toRad(b.lng - a.lng);
   const y = Math.sin(dLng) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLng);
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
 function proximityPct(km) {
-  const HALF_EARTH = 20015; // km, half the circumference - max possible distance
-  return Math.max(0, Math.round(100 - (km / HALF_EARTH) * 100));
+  return Math.max(0, Math.round(100 - (km / 20015) * 100));
 }
 
-function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+// Convert lat/lng to 3D point on a unit sphere.
+// Three.js convention: Y up, Z toward viewer.
+function latLngTo3D(lat, lng, r) {
+  const phi   = toRad(90 - lat);
+  const theta = toRad(lng + 180);
+  return new THREE.Vector3(
+    -(r * Math.sin(phi) * Math.cos(theta)),
+     (r * Math.cos(phi)),
+     (r * Math.sin(phi) * Math.sin(theta))
+  );
+}
+
+// Heat color: blue (far) -> red (close), green for correct.
 function heatColor(pct) {
-  const cold = { r: 61, g: 107, b: 224 };  // blue - far
-  const hot = { r: 232, g: 17, b: 75 };    // crimson - close
-  const t = Math.max(0, Math.min(1, pct / 100));
-  return `rgb(${lerp(cold.r, hot.r, t)},${lerp(cold.g, hot.g, t)},${lerp(cold.b, hot.b, t)})`;
+  const cold = new THREE.Color(0x3d6be0);
+  const hot  = new THREE.Color(0xe8114b);
+  return cold.clone().lerp(hot, pct / 100);
 }
 
-const MAP_W = 720, MAP_H = 360;
-function project(lat, lng) {
-  return {
-    x: (lng + 180) / 360 * MAP_W,
-    y: (90 - lat) / 180 * MAP_H,
-  };
-}
-
-function arrowSvg(deg) {
-  return `<svg viewBox="0 0 24 24" width="18" height="18" style="transform:rotate(${deg}deg)">
-    <path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/>
-  </svg>`;
-}
+// ---------- state ----------
 
 const state = {
   answer: getTodaysCountry(),
   guesses: [],
   gameOver: false,
+  spinning: true,
 };
 
-const mapEl = document.getElementById("globle-map");
-const attemptsEl = document.getElementById("attempts-left");
-const statusEl = document.getElementById("status");
-const guessForm = document.getElementById("guess-form");
-const guessInput = document.getElementById("guess-input");
-const autocompleteList = document.getElementById("autocomplete-list");
-const guessList = document.getElementById("guess-list");
-const playAgainBtn = document.getElementById("play-again");
+// ---------- DOM refs ----------
+
+const canvasContainer = document.getElementById("globle-map");
+const attemptsEl      = document.getElementById("attempts-left");
+const statusEl        = document.getElementById("status");
+const guessForm       = document.getElementById("guess-form");
+const guessInput      = document.getElementById("guess-input");
+const autocompleteList= document.getElementById("autocomplete-list");
+const guessList       = document.getElementById("guess-list");
+const playAgainBtn    = document.getElementById("play-again");
 
 function showStatus(msg, isError = false) {
   statusEl.textContent = msg;
   statusEl.classList.toggle("error", isError);
 }
 
-// ---------- map rendering ----------
+// ---------- Three.js globe ----------
 
-function renderMap() {
-  const gridLines = [];
-  for (let lng = -180; lng <= 180; lng += 30) {
-    const x = project(0, lng).x;
-    gridLines.push(`<line x1="${x}" y1="0" x2="${x}" y2="${MAP_H}" stroke="var(--line)" stroke-width="1" />`);
-  }
-  for (let lat = -90; lat <= 90; lat += 30) {
-    const y = project(lat, 0).y;
-    gridLines.push(`<line x1="0" y1="${y}" x2="${MAP_W}" y2="${y}" stroke="var(--line)" stroke-width="1" />`);
-  }
+const GLOBE_RADIUS = 1;
+const DOT_RADIUS = 0.035;
 
-  const dots = state.guesses.map(g => {
-    const p = project(g.country.lat, g.country.lng);
-    const color = g.isCorrect ? "var(--correct)" : heatColor(g.pct);
-    return `
-      <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7" fill="${color}" stroke="#14171c" stroke-width="1.5" opacity="0.9">
-        <title>${g.country.name}</title>
-      </circle>
-    `;
-  }).join("");
+let renderer, scene, camera, globe, dotGroup;
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let rotVel = { x: 0, y: 0 }; // momentum for flick-drag
 
-  mapEl.innerHTML = `
-    <svg viewBox="0 0 ${MAP_W} ${MAP_H}" width="100%" height="100%">
-      <rect x="0" y="0" width="${MAP_W}" height="${MAP_H}" fill="var(--bg-panel)" />
-      ${gridLines.join("")}
-      ${dots}
-    </svg>
-  `;
+function initGlobe() {
+  const W = canvasContainer.clientWidth;
+  const H = canvasContainer.clientHeight;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(W, H);
+  canvasContainer.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+  camera.position.z = 2.8;
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(5, 3, 5);
+  scene.add(dirLight);
+
+  // Globe sphere with Earth texture
+  const geo = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 64);
+  const loader = new THREE.TextureLoader();
+  // Free NASA "Blue Marble" Earth texture via cdnjs-compatible URL
+  const texture = loader.load(
+    "https://raw.githubusercontent.com/turban/webgl-earth/master/images/2_no_clouds_4k.jpg",
+    () => { /* loaded */ },
+    undefined,
+    () => {
+      // Fallback: plain dark blue sphere if texture fails to load
+      globe.material.color.set(0x1a3a6e);
+    }
+  );
+  const mat = new THREE.MeshPhongMaterial({ map: texture, specular: 0x222222 });
+  globe = new THREE.Mesh(geo, mat);
+  scene.add(globe);
+
+  // Group to hold all guess dots as children of the globe,
+  // so they rotate with it when the player drags.
+  dotGroup = new THREE.Group();
+  globe.add(dotGroup);
+
+  // Atmosphere glow (simple additive sphere slightly larger)
+  const atmoGeo = new THREE.SphereGeometry(GLOBE_RADIUS * 1.015, 32, 32);
+  const atmoMat = new THREE.MeshPhongMaterial({
+    color: 0x4488ff,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.FrontSide,
+  });
+  scene.add(new THREE.Mesh(atmoGeo, atmoMat));
+
+  // Drag-to-rotate
+  renderer.domElement.addEventListener("mousedown", onDragStart);
+  renderer.domElement.addEventListener("mousemove", onDragMove);
+  renderer.domElement.addEventListener("mouseup",   onDragEnd);
+  renderer.domElement.addEventListener("mouseleave",onDragEnd);
+  renderer.domElement.addEventListener("touchstart", e => onDragStart(e.touches[0]), { passive: true });
+  renderer.domElement.addEventListener("touchmove",  e => { e.preventDefault(); onDragMove(e.touches[0]); }, { passive: false });
+  renderer.domElement.addEventListener("touchend",   onDragEnd);
+
+  window.addEventListener("resize", () => {
+    const W2 = canvasContainer.clientWidth;
+    const H2 = canvasContainer.clientHeight;
+    renderer.setSize(W2, H2);
+    camera.aspect = W2 / H2;
+    camera.updateProjectionMatrix();
+  });
+
+  animate();
 }
-renderMap();
-attemptsEl.textContent = `${state.guesses.length} guesses`;
 
-// ---------- autocomplete (reused pattern from Flagle, text-only) ----------
+function onDragStart(e) {
+  isDragging = true;
+  prevMouse = { x: e.clientX, y: e.clientY };
+  rotVel = { x: 0, y: 0 };
+}
+
+function onDragMove(e) {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  globe.rotation.y += dx * 0.005;
+  globe.rotation.x += dy * 0.005;
+  rotVel = { x: dy * 0.005, y: dx * 0.005 };
+  prevMouse = { x: e.clientX, y: e.clientY };
+}
+
+function onDragEnd() {
+  isDragging = false;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (state.spinning && !isDragging) {
+    // Auto-spin until first guess
+    globe.rotation.y += 0.004;
+  } else if (!isDragging) {
+    // Momentum decay after a flick-drag
+    globe.rotation.y += rotVel.y;
+    globe.rotation.x += rotVel.x;
+    rotVel.x *= 0.92;
+    rotVel.y *= 0.92;
+  }
+
+  renderer.render(scene, camera);
+}
+
+function addDot(lat, lng, color) {
+  const pos = latLngTo3D(lat, lng, GLOBE_RADIUS + DOT_RADIUS * 0.5);
+  const geo = new THREE.SphereGeometry(DOT_RADIUS, 12, 12);
+  const mat = new THREE.MeshPhongMaterial({ color });
+  const dot = new THREE.Mesh(geo, mat);
+  dot.position.copy(pos);
+  dotGroup.add(dot);
+}
+
+// ---------- autocomplete ----------
 
 let currentOptions = [];
 let activeIndex = -1;
@@ -132,10 +223,9 @@ function renderAutocompleteOptions(query) {
   currentOptions = q
     ? COUNTRIES.filter(c => c.name.toLowerCase().includes(q))
     : COUNTRIES.slice();
-
   activeIndex = -1;
 
-  if (currentOptions.length === 0) {
+  if (!currentOptions.length) {
     autocompleteList.classList.add("hidden");
     autocompleteList.innerHTML = "";
     return;
@@ -147,10 +237,9 @@ function renderAutocompleteOptions(query) {
   autocompleteList.classList.remove("hidden");
 
   autocompleteList.querySelectorAll(".autocomplete-option").forEach(opt => {
-    opt.addEventListener("mousedown", (e) => {
+    opt.addEventListener("mousedown", e => {
       e.preventDefault();
-      const country = currentOptions[Number(opt.dataset.index)];
-      guessInput.value = country.name;
+      guessInput.value = currentOptions[Number(opt.dataset.index)].name;
       autocompleteList.classList.add("hidden");
     });
   });
@@ -163,105 +252,91 @@ function updateActiveOption(opts) {
 
 guessInput.addEventListener("input", () => renderAutocompleteOptions(guessInput.value));
 guessInput.addEventListener("focus", () => renderAutocompleteOptions(guessInput.value));
-
-guessInput.addEventListener("keydown", (e) => {
+guessInput.addEventListener("keydown", e => {
   if (autocompleteList.classList.contains("hidden")) return;
   const opts = autocompleteList.querySelectorAll(".autocomplete-option");
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    activeIndex = Math.min(activeIndex + 1, opts.length - 1);
-    updateActiveOption(opts);
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    activeIndex = Math.max(activeIndex - 1, 0);
-    updateActiveOption(opts);
-  } else if (e.key === "Enter" && activeIndex >= 0) {
-    e.preventDefault();
-    guessInput.value = currentOptions[activeIndex].name;
-    autocompleteList.classList.add("hidden");
-  } else if (e.key === "Escape") {
-    autocompleteList.classList.add("hidden");
-  }
+  if (e.key === "ArrowDown") { e.preventDefault(); activeIndex = Math.min(activeIndex+1, opts.length-1); updateActiveOption(opts); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); activeIndex = Math.max(activeIndex-1, 0); updateActiveOption(opts); }
+  else if (e.key === "Enter" && activeIndex >= 0) { e.preventDefault(); guessInput.value = currentOptions[activeIndex].name; autocompleteList.classList.add("hidden"); }
+  else if (e.key === "Escape") { autocompleteList.classList.add("hidden"); }
 });
-
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".autocomplete")) {
-    autocompleteList.classList.add("hidden");
-  }
+document.addEventListener("click", e => {
+  if (!e.target.closest(".autocomplete")) autocompleteList.classList.add("hidden");
 });
 
 // ---------- guess rows ----------
 
+function arrowSvg(deg) {
+  return `<svg viewBox="0 0 24 24" width="18" height="18" style="transform:rotate(${deg}deg)"><path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/></svg>`;
+}
+
 function renderGuessRow(g) {
   const row = document.createElement("div");
   row.className = "globle-row" + (g.isCorrect ? " correct" : "");
-  if (g.isCorrect) {
-    row.innerHTML = `
-      <span class="flagle-name">${g.country.name}</span>
-      <span class="flagle-correct">Correct! 🎉</span>
-    `;
-  } else {
-    row.innerHTML = `
-      <span class="flagle-name">${g.country.name}</span>
-      <span class="flagle-arrow" title="direction">${arrowSvg(g.deg)}</span>
-      <span class="flagle-pct" style="--pct:${g.pct}%">${g.pct}% match</span>
-    `;
-  }
+  row.innerHTML = g.isCorrect
+    ? `<span class="flagle-name">${g.country.name}</span><span class="flagle-correct">Correct! 🎉</span>`
+    : `<span class="flagle-name">${g.country.name}</span><span class="flagle-arrow">${arrowSvg(g.deg)}</span><span class="flagle-pct">${g.pct}% match</span>`;
   guessList.prepend(row);
 }
 
 // ---------- guess submission ----------
 
-guessForm.addEventListener("submit", (e) => {
+guessForm.addEventListener("submit", e => {
   e.preventDefault();
   if (state.gameOver) return;
 
   const typed = guessInput.value.trim();
   const country = COUNTRIES.find(c => c.name.toLowerCase() === typed.toLowerCase());
 
-  if (!country) {
-    showStatus("Not a recognized country name - pick from the suggestions", true);
-    return;
-  }
-  if (state.guesses.some(g => g.country.code === country.code)) {
-    showStatus("Already guessed that one", true);
-    return;
-  }
+  if (!country) { showStatus("Not a recognized country - pick from the list", true); return; }
+  if (state.guesses.some(g => g.country.code === country.code)) { showStatus("Already guessed that one", true); return; }
 
   showStatus("");
   guessInput.value = "";
   autocompleteList.classList.add("hidden");
 
+  // Stop spinning on first guess
+  if (state.guesses.length === 0) state.spinning = false;
+
   const isCorrect = country.code === state.answer.code;
-  const km = distanceKm(country, state.answer);
+  const km  = distanceKm(country, state.answer);
   const deg = bearingDeg(country, state.answer);
   const pct = isCorrect ? 100 : proximityPct(km);
+
+  const dotColor = isCorrect ? 0x5fb87a : new THREE.Color().lerpColors(
+    new THREE.Color(0x3d6be0),
+    new THREE.Color(0xe8114b),
+    pct / 100
+  );
+  addDot(country.lat, country.lng, dotColor);
 
   const g = { country, isCorrect, km, deg, pct };
   state.guesses.push(g);
   renderGuessRow(g);
-  renderMap();
-  attemptsEl.textContent = `${state.guesses.length} guesses`;
+  attemptsEl.textContent = `${state.guesses.length} ${state.guesses.length === 1 ? "guess" : "guesses"}`;
 
-  if (isCorrect) {
-    endGame();
-  }
+  if (isCorrect) endGame();
 });
 
 function endGame() {
   state.gameOver = true;
   playAgainBtn.classList.add("show");
-  const guessWord = state.guesses.length === 1 ? "guess" : "guesses";
-  showStatus(`Solved in ${state.guesses.length} ${guessWord}! 🎉`);
+  const n = state.guesses.length;
+  showStatus(`Solved in ${n} ${n === 1 ? "guess" : "guesses"}! 🎉`);
 }
 
 playAgainBtn.addEventListener("click", () => {
   state.answer = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
   state.guesses = [];
   state.gameOver = false;
+  state.spinning = true;
+  // Clear all dots
+  while (dotGroup.children.length) dotGroup.remove(dotGroup.children[0]);
   guessList.innerHTML = "";
   playAgainBtn.classList.remove("show");
   showStatus("");
   attemptsEl.textContent = "0 guesses";
-  renderMap();
 });
+
+// ---------- boot ----------
+initGlobe();
