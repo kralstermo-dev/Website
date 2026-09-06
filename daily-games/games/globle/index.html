@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Globle | Daily Games</title>
-<link rel="stylesheet" href="../../../styles/main.css?v=15">
+<link rel="stylesheet" href="../../../styles/main.css?v=16">
 </head>
 <body>
 
@@ -13,9 +13,20 @@
 </div>
 
 <div class="game-shell">
-  <div class="game-header">
+  <div class="game-header game-header-row">
     <h1>Globle</h1>
-    <p>Guess the country. Dots plot on the globe by closeness. Drag to rotate.</p>
+    <button id="settings-btn" type="button" class="icon-btn" title="Settings">&#9881;</button>
+  </div>
+  <p>Guess the country. Dots plot on the globe by closeness. Drag to rotate.</p>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <label class="settings-row">
+      Distance units:
+      <select id="units-select" style="margin-left:8px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-family:var(--font-mono);font-size:13px;">
+        <option value="km">km</option>
+        <option value="miles">miles</option>
+      </select>
+    </label>
   </div>
 
   <div id="status" class="status-msg" role="status" aria-live="polite"></div>
@@ -41,7 +52,9 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="../flagle/countries.js?v=15"></script>
-<script src="game.js?v=15"></script>
+<script src="../flagle/countries.js?v=16"></script>
+<script src="borders.js?v=16"></script>
+<script src="polys.js?v=16"></script>
+<script src="game.js?v=16"></script>
 </body>
 </html>
