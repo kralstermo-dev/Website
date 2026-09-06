@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGA Trainer | MC Tools</title>
+<link rel="stylesheet" href="../../styles/main.css?v=16">
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back-link" href="../index.html">&larr; back to MC Tools</a>
+</div>
+
+<div class="game-shell">
+  <div class="game-header">
+    <h1>SGA Trainer</h1>
+    <p>Learn to read the Standard Galactic Alphabet - the runes on Minecraft's enchanting table. Match the symbol to the letter, or the letter to the symbol.</p>
+  </div>
+
+  <div class="mode-select" role="tablist" aria-label="Quiz direction">
+    <button class="mode-btn active" data-mode="toLetter" type="button">Symbol &rarr; Letter</button>
+    <button class="mode-btn" data-mode="toSymbol" type="button">Letter &rarr; Symbol</button>
+  </div>
+
+  <div id="prompt" class="sga-prompt"></div>
+
+  <button id="reveal-btn" class="sga-reveal-btn" type="button">Not sure? Reveal it</button>
+
+  <div id="status" class="status-msg" role="status" aria-live="polite">Score: 0/0 &middot; Streak: 0</div>
+
+  <div id="keyboard" class="keyboard sga-answers"></div>
+
+  <button id="chart-toggle" class="mode-btn" type="button" style="margin-top:24px;">Show the full A-Z key</button>
+
+  <div id="chart-panel" class="settings-panel hidden" style="text-align:center;">
+    <div id="sga-chart" class="sga-chart"></div>
+  </div>
+</div>
+
+<script src="game.js?v=1"></script>
+</body>
+</html>

@@ -4,6 +4,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
+/* Standard Galactic Alphabet font (CC0) - used by the SGA Trainer.
+   Maps A-Z to U+EB40-EB59, the ConScript Unicode Registry's
+   private-use block for this alphabet. */
+@font-face {
+  font-family: 'SGA';
+  src: url('https://cdn.jsdelivr.net/gh/standardgalactic/alphabet@core/Sga-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
 :root {
   --bg: #14171c;
   --bg-panel: #1c2029;
@@ -1167,3 +1176,89 @@ button:focus-visible,
   font-size: 13px;
 }
 .globle-row.correct { border-color: var(--correct); }
+
+/* ============================================================
+   SGA TRAINER
+   ============================================================ */
+
+.sga-prompt {
+  width: 140px;
+  height: 140px;
+  margin: 4px auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.sga-prompt.sga-glyph {
+  font-family: 'SGA', sans-serif;
+  font-size: 76px;
+  color: var(--ink);
+}
+
+.sga-prompt.sga-letter {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 64px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.sga-reveal-btn {
+  display: block;
+  margin: 0 auto 18px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 4px;
+}
+.sga-reveal-btn:hover { color: var(--accent); }
+
+.sga-answers { margin-top: 8px; }
+
+.key.sga-key {
+  font-family: 'SGA', sans-serif;
+  font-size: 18px;
+  text-transform: none;
+}
+
+.key.wrong { background: var(--danger); color: #14171c; }
+
+.sga-chart {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.sga-chart-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-panel-hover);
+  border-radius: 6px;
+  padding: 8px 4px 6px;
+}
+
+.sga-chart-glyph {
+  font-family: 'SGA', sans-serif;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.sga-chart-letter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
