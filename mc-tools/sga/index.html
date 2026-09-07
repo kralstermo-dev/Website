@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SGA Trainer | MC Tools</title>
-<link rel="stylesheet" href="../../styles/main.css?v=16">
+<link rel="stylesheet" href="../../styles/main.css?v=17">
 </head>
 <body>
 
@@ -19,15 +19,16 @@
   </div>
 
   <div class="mode-select" role="tablist" aria-label="Quiz direction">
-    <button class="mode-btn active" data-mode="toLetter" type="button">Symbol &rarr; Letter</button>
-    <button class="mode-btn" data-mode="toSymbol" type="button">Letter &rarr; Symbol</button>
+    <button class="mode-btn active" data-mode="toLetter" type="button">Symbol <span class="mode-arrow">&rsaquo;</span> Letter</button>
+    <button class="mode-btn" data-mode="toSymbol" type="button">Letter <span class="mode-arrow">&rsaquo;</span> Symbol</button>
   </div>
 
   <div id="prompt" class="sga-prompt"></div>
 
   <button id="reveal-btn" class="sga-reveal-btn" type="button">Not sure? Reveal it</button>
 
-  <div id="status" class="status-msg" role="status" aria-live="polite">Score: 0/0 &middot; Streak: 0</div>
+  <div id="feedback" class="status-msg" role="status" aria-live="polite"></div>
+  <div id="stats" class="status-stats">Score: 0/0 &middot; Streak: 0</div>
 
   <div id="keyboard" class="keyboard sga-answers"></div>
 
@@ -38,6 +39,7 @@
   </div>
 </div>
 
-<script src="game.js?v=1"></script>
+<script src="sga-glyphs.js?v=1"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>

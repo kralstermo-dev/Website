@@ -4,16 +4,17 @@
 // table, originally from Commander Keen). Two directions:
 //   toLetter  - shown a symbol, pick the Latin letter
 //   toSymbol  - shown a letter, pick the matching symbol
-// Symbols are rendered with the real SGA-Regular font (CC0),
-// mapped to the ConScript Unicode Registry's private-use block
-// starting at U+EB40 for A.
+// Symbols are drawn as inline SVGs from SGA_GLYPHS (sga-glyphs.js),
+// traced from a reference chart, so no external font is needed.
 // ============================================================
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-const SGA_BASE = 0xEB40;
 
-function sgaChar(letter) {
-  return String.fromCodePoint(SGA_BASE + ALPHABET.indexOf(letter));
+function svgFor(letter, extraClass) {
+  const g = SGA_GLYPHS[letter];
+  if (!g) return "";
+  const rects = g.r.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`).join("");
+  return `<svg class="sga-svg${extraClass ? " " + extraClass : ""}" viewBox="0 0 ${g.w} ${g.h}" fill="currentColor" aria-hidden="true">${rects}</svg>`;
 }
 
 // QWERTY layout so the answer grid always sits in the same shape
@@ -34,7 +35,8 @@ const state = {
 };
 
 const promptEl = document.getElementById("prompt");
-const statusEl = document.getElementById("status");
+const feedbackEl = document.getElementById("feedback");
+const statsEl = document.getElementById("stats");
 const keyboardEl = document.getElementById("keyboard");
 const revealBtn = document.getElementById("reveal-btn");
 const chartToggle = document.getElementById("chart-toggle");
@@ -49,8 +51,9 @@ function buildKeyboard() {
     row.forEach(letter => {
       const btn = document.createElement("button");
       btn.className = "key" + (state.mode === "toSymbol" ? " sga-key" : "");
-      btn.textContent = state.mode === "toSymbol" ? sgaChar(letter) : letter;
+      btn.innerHTML = state.mode === "toSymbol" ? svgFor(letter) : letter;
       btn.dataset.letter = letter;
+      btn.setAttribute("aria-label", letter);
       btn.addEventListener("click", () => handleAnswer(letter, btn));
       rowEl.appendChild(btn);
     });
@@ -62,7 +65,7 @@ function renderPrompt() {
   promptEl.classList.remove("correct", "wrong");
   if (state.mode === "toLetter") {
     promptEl.className = "sga-prompt sga-glyph";
-    promptEl.textContent = sgaChar(state.answer);
+    promptEl.innerHTML = svgFor(state.answer);
   } else {
     promptEl.className = "sga-prompt sga-letter";
     promptEl.textContent = state.answer;
@@ -81,9 +84,8 @@ function nextQuestion() {
   });
 }
 
-function updateStatus(msg) {
-  const base = `Score: ${state.correct}/${state.total} &middot; Streak: ${state.streak}`;
-  statusEl.innerHTML = msg ? `${msg} &mdash; ${base}` : base;
+function updateStats() {
+  statsEl.textContent = `Score: ${state.correct}/${state.total} \u00b7 Streak: ${state.streak}`;
 }
 
 function handleAnswer(letter, btn) {
@@ -96,14 +98,15 @@ function handleAnswer(letter, btn) {
     state.correct++;
     state.streak++;
     btn.classList.add("correct");
-    updateStatus("Correct! ✅");
+    feedbackEl.textContent = "Correct";
   } else {
     state.streak = 0;
     btn.classList.add("wrong");
     const rightBtn = document.querySelector(`.sga-answers .key[data-letter="${state.answer}"]`);
     if (rightBtn) rightBtn.classList.add("correct");
-    updateStatus(`Not quite, that was ${state.answer}`);
+    feedbackEl.textContent = `Not quite, that was ${state.answer}`;
   }
+  updateStats();
 
   setTimeout(() => {
     nextQuestion();
@@ -116,7 +119,7 @@ function buildChart() {
   ALPHABET.forEach(letter => {
     const cell = document.createElement("div");
     cell.className = "sga-chart-cell";
-    cell.innerHTML = `<span class="sga-chart-glyph">${sgaChar(letter)}</span><span class="sga-chart-letter">${letter}</span>`;
+    cell.innerHTML = `<span class="sga-chart-glyph">${svgFor(letter)}</span><span class="sga-chart-letter">${letter}</span>`;
     chartEl.appendChild(cell);
   });
 }
@@ -133,7 +136,8 @@ document.querySelectorAll(".mode-btn[data-mode]").forEach(btn => {
     state.answer = "";
     buildKeyboard();
     nextQuestion();
-    updateStatus("");
+    feedbackEl.textContent = "";
+    updateStats();
   });
 });
 
@@ -142,7 +146,7 @@ revealBtn.addEventListener("click", () => {
   state.locked = true;
   const rightBtn = document.querySelector(`.sga-answers .key[data-letter="${state.answer}"]`);
   if (rightBtn) rightBtn.classList.add("correct");
-  updateStatus(`That's ${state.answer}`);
+  feedbackEl.textContent = `That's ${state.answer}`;
   setTimeout(() => {
     nextQuestion();
     state.locked = false;
@@ -155,7 +159,18 @@ chartToggle.addEventListener("click", () => {
   chartToggle.textContent = showing ? "Show the full A-Z key" : "Hide the A-Z key";
 });
 
+// Keyboard shortcut: typing a letter answers directly in Symbol -> Letter
+// mode, where every A-Z key already corresponds to a visible answer key.
+document.addEventListener("keydown", (e) => {
+  if (state.mode !== "toLetter") return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const letter = e.key.toUpperCase();
+  if (!/^[A-Z]$/.test(letter)) return;
+  const btn = document.querySelector(`.sga-answers .key[data-letter="${letter}"]`);
+  if (btn) handleAnswer(letter, btn);
+});
+
 buildChart();
 buildKeyboard();
 nextQuestion();
-updateStatus("");
+updateStats();

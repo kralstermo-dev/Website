@@ -1199,6 +1199,17 @@ button:focus-visible,
    SGA TRAINER
    ============================================================ */
 
+.sga-svg { display: block; }
+
+.mode-arrow {
+  display: inline-block;
+  color: var(--ink-dim);
+  opacity: 0.7;
+  padding: 0 2px;
+  transform: scaleY(1.3);
+}
+.mode-btn.active .mode-arrow { color: #14171c; opacity: 0.6; }
+
 .sga-prompt {
   width: 140px;
   height: 140px;
@@ -1210,20 +1221,16 @@ button:focus-visible,
   border: 2px solid var(--line);
   border-radius: 12px;
   transition: border-color 0.15s ease;
-}
-
-.sga-prompt.sga-glyph {
-  font-family: 'SGA', sans-serif;
-  font-size: 76px;
   color: var(--ink);
 }
+
+.sga-prompt.sga-glyph .sga-svg { width: 68%; height: 68%; }
 
 .sga-prompt.sga-letter {
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 64px;
   text-transform: uppercase;
-  color: var(--ink);
 }
 
 .sga-reveal-btn {
@@ -1241,13 +1248,18 @@ button:focus-visible,
 }
 .sga-reveal-btn:hover { color: var(--accent); }
 
+.status-stats {
+  min-height: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-top: -6px;
+  margin-bottom: 14px;
+  color: var(--ink-dim);
+}
+
 .sga-answers { margin-top: 8px; }
 
-.key.sga-key {
-  font-family: 'SGA', sans-serif;
-  font-size: 18px;
-  text-transform: none;
-}
+.key .sga-svg { width: 20px; height: 20px; }
 
 .key.wrong { background: var(--danger); color: #14171c; }
 
@@ -1262,17 +1274,20 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   background: var(--bg-panel-hover);
   border-radius: 6px;
-  padding: 8px 4px 6px;
+  padding: 10px 4px 6px;
 }
 
 .sga-chart-glyph {
-  font-family: 'SGA', sans-serif;
-  font-size: 26px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  color: var(--ink);
 }
+.sga-chart-glyph .sga-svg { width: 26px; height: 26px; }
 
 .sga-chart-letter {
   font-family: var(--font-mono);
