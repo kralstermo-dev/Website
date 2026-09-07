@@ -71,13 +71,25 @@ function latLngTo3D(lat, lng, r) {
 
 // Build a THREE.js quaternion that rotates the globe so that lat/lng
 // faces the camera (i.e., is centered on screen).
+// Build a quaternion that rotates the globe so that the point at
+// (lat, lng) faces the camera (which sits at +Z). We do this in two
+// steps: first rotate around Y to bring the longitude to the front,
+// then tilt around X to bring the latitude to center.
 function quaternionForLatLng(lat, lng) {
-  const phi   = toRad(90 - lat);
-  const theta = toRad(lng + 180);
-  // Target: the point on sphere faces -Z (toward camera at +Z)
-  const q1 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI - toRad(lng+180));
-  const q2 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), toRad(lat));
-  return q1.multiply(q2);
+  // Rotate around Y: bring the target longitude to face +Z (front)
+  // lng=0 (prime meridian) already faces the camera when globe.rotation = 0,
+  // so we negate lng to spin the globe the correct direction.
+  const qY = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 1, 0),
+    toRad(-lng)
+  );
+  // Rotate around X: tilt the globe so the latitude comes to center.
+  // Positive lat (northern hemisphere) needs to tilt up (negative X rotation).
+  const qX = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    toRad(lat)
+  );
+  return qY.multiply(qX);
 }
 
 // ---------- state ----------
@@ -209,8 +221,13 @@ function onDragMove(e) {
   if (!isDragging) return;
   const dx = e.clientX - prevMouse.x;
   const dy = e.clientY - prevMouse.y;
-  globe.rotation.y += dx * 0.005;
-  globe.rotation.x += dy * 0.005;
+
+  // Apply rotation as quaternion deltas so it stays consistent with
+  // the pan system - never touch globe.rotation.x/y directly
+  const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * 0.005);
+  const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.005);
+  globe.quaternion.premultiply(qY).premultiply(qX);
+
   rotVel = { x: dy * 0.005, y: dx * 0.005 };
   prevMouse = { x: e.clientX, y: e.clientY };
 }
@@ -228,8 +245,9 @@ function animate() {
   requestAnimationFrame(animate);
 
   if (state.spinning && !isDragging && !state.panTarget) {
-    // Slow auto-spin before first guess
-    globe.rotation.y += 0.001;
+    // Slow auto-spin before first guess - use quaternion delta
+    const qSpin = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.001);
+    globe.quaternion.premultiply(qSpin);
   } else if (state.panTarget) {
     // Smooth pan to guessed country
     state.panProgress += 0.03;
@@ -242,11 +260,14 @@ function animate() {
     }
     rotVel = { x: 0, y: 0 };
   } else if (!isDragging) {
-    // Momentum decay
-    globe.rotation.y += rotVel.y;
-    globe.rotation.x += rotVel.x;
-    rotVel.x *= 0.92;
-    rotVel.y *= 0.92;
+    // Momentum decay after a flick-drag - also quaternion deltas
+    if (Math.abs(rotVel.x) > 0.0001 || Math.abs(rotVel.y) > 0.0001) {
+      const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotVel.y);
+      const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), rotVel.x);
+      globe.quaternion.premultiply(qY).premultiply(qX);
+      rotVel.x *= 0.92;
+      rotVel.y *= 0.92;
+    }
   }
 
   renderer.render(scene, camera);
