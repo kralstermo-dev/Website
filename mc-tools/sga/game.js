@@ -14,7 +14,7 @@ function svgFor(letter, extraClass) {
   const g = SGA_GLYPHS[letter];
   if (!g) return "";
   const rects = g.r.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`).join("");
-  return `<svg class="sga-svg${extraClass ? " " + extraClass : ""}" viewBox="0 0 ${g.w} ${g.h}" fill="currentColor" aria-hidden="true">${rects}</svg>`;
+  return `<svg class="sga-svg${extraClass ? " " + extraClass : ""}" viewBox="0 0 ${g.w} ${g.h}" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
 }
 
 // QWERTY layout so the answer grid always sits in the same shape
