@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morse Code Trainer | General Tools</title>
+<link rel="stylesheet" href="../../styles/main.css?v=19">
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back-link" href="../index.html">&larr; back to General Tools</a>
+</div>
+
+<div class="game-shell">
+  <div class="game-header">
+    <h1>Morse Code Trainer</h1>
+    <p>Learn International Morse Code - tap out the pattern for a letter, or listen to a pattern and name the letter.</p>
+  </div>
+
+  <div class="mode-select" role="tablist" aria-label="Quiz direction">
+    <button class="mode-btn active" data-mode="toMorse" type="button">Letter <span class="mode-arrow">&rsaquo;</span> Morse</button>
+    <button class="mode-btn" data-mode="toLetter" type="button">Morse <span class="mode-arrow">&rsaquo;</span> Letter</button>
+  </div>
+
+  <div id="prompt" class="morse-prompt morse-prompt-letter"></div>
+
+  <button id="play-btn" class="reveal-btn morse-play-btn hidden" type="button">&#9658; Play sound</button>
+
+  <div id="build-area" class="morse-build-area">
+    <div id="build-display" class="morse-build-display" aria-live="polite"></div>
+    <div class="morse-input-row">
+      <button id="dot-btn" class="morse-symbol-btn" type="button" aria-label="Add dot">
+        <span class="morse-symbol dot"></span>
+      </button>
+      <button id="dash-btn" class="morse-symbol-btn" type="button" aria-label="Add dash">
+        <span class="morse-symbol dash"></span>
+      </button>
+      <button id="back-btn" class="morse-symbol-btn ghost" type="button" aria-label="Remove last symbol">&larr;</button>
+      <button id="clear-btn" class="morse-symbol-btn ghost" type="button">Clear</button>
+    </div>
+  </div>
+
+  <button id="reveal-btn" class="reveal-btn" type="button">Not sure? Reveal it</button>
+
+  <div id="feedback" class="status-msg" role="status" aria-live="polite"></div>
+  <div id="stats" class="status-stats">Score: 0/0 &middot; Streak: 0</div>
+
+  <div id="keyboard" class="keyboard morse-answers hidden"></div>
+
+  <button id="chart-toggle" class="mode-btn" type="button" style="margin-top:24px;">Show the full A-Z key</button>
+
+  <div id="chart-panel" class="settings-panel hidden" style="text-align:center;">
+    <div id="morse-chart" class="morse-chart"></div>
+  </div>
+</div>
+
+<script src="morse-data.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
