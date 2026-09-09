@@ -13,8 +13,14 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 function svgFor(letter, extraClass) {
   const g = SGA_GLYPHS[letter];
   if (!g) return "";
-  const rects = g.r.map(([x, y, w, h]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`).join("");
-  return `<svg class="sga-svg${extraClass ? " " + extraClass : ""}" viewBox="0 0 ${g.w} ${g.h}" fill="currentColor" aria-hidden="true">${rects}</svg>`;
+  // Draw every rect as a subpath of ONE <path>, instead of separate
+  // <rect> elements. Adjacent rects that merely touch (no gap, no
+  // overlap) still get anti-aliased individually by the renderer,
+  // which shows up as faint seam lines between them. A single path
+  // is filled as one shape, so there's nothing for the renderer to
+  // seam.
+  const d = g.r.map(([x, y, w, h]) => `M${x} ${y}h${w}v${h}h${-w}Z`).join("");
+  return `<svg class="sga-svg${extraClass ? " " + extraClass : ""}" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 }
 
 // QWERTY layout so the answer grid always sits in the same shape

@@ -1327,6 +1327,7 @@ button:focus-visible,
   color: var(--ink-dim);
   text-transform: uppercase;
 }
+<<<<<<< HEAD
 
 /* ============================================================
    MORSE CODE TRAINER
@@ -1503,3 +1504,5 @@ button:focus-visible,
   color: var(--ink-dim);
   text-transform: uppercase;
 }
+=======
+>>>>>>> 5d3c255a6255421b33075e7006cb6177a72a9909
