@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnitudle | Daily Games</title>
+<link rel="stylesheet" href="../../../styles/main.css?v=20">
+</head>
+<body>
+
+<div class="wrap">
+  <a class="back-link" href="../../index.html">&larr; back to Daily Games</a>
+</div>
+
+<div class="game-shell magnitudle-shell">
+
+  <div class="game-header-row">
+    <h1 class="magnitudle-title">Daily Question</h1>
+    <button id="help-btn" class="help-icon" type="button" aria-label="How to play">?</button>
+  </div>
+
+  <div id="help-panel" class="settings-panel hidden">
+    <p class="magnitudle-help-text">
+      Type your best guess, tap a magnitude button if it's a big number (like <strong>x1M</strong> for millions),
+      then lock it in. You'll score 0-100 based on how many orders of magnitude away you were from the real
+      answer - the closer, the higher the score.
+    </p>
+  </div>
+
+  <hr class="magnitudle-rule">
+
+  <div id="meta-row" class="magnitudle-meta"></div>
+
+  <h2 id="question-text" class="magnitudle-question"></h2>
+  <p id="question-sub" class="magnitudle-subtitle"></p>
+
+  <hr class="magnitudle-rule">
+
+  <!-- ---------- input phase ---------- -->
+  <div id="input-phase">
+    <div id="estimate-preview" class="magnitudle-preview hidden">
+      <span class="magnitudle-preview-label">Your estimate</span>
+      <span id="estimate-preview-value" class="magnitudle-preview-value"></span>
+    </div>
+
+    <input id="estimate-input" class="magnitudle-input" type="text" inputmode="decimal"
+           placeholder="Your estimate..." autocomplete="off">
+
+    <div class="magnitudle-mag-row">
+      <button class="magnitudle-mag-btn" data-mult="1000" type="button">x1K</button>
+      <button class="magnitudle-mag-btn" data-mult="1000000" type="button">x1M</button>
+      <button class="magnitudle-mag-btn" data-mult="1000000000" type="button">x1B</button>
+      <button class="magnitudle-mag-btn" data-mult="1000000000000" type="button">x1T</button>
+      <button class="magnitudle-mag-btn" data-mult="1000000000000000" type="button">x1Q</button>
+    </div>
+
+    <button id="lock-btn" class="magnitudle-lock-btn" type="button" disabled>
+      Lock in answer <span class="lock-arrow">&rarr;</span>
+    </button>
+  </div>
+
+  <!-- ---------- result phase ---------- -->
+  <div id="result-phase" class="hidden">
+    <div id="verdict" class="magnitudle-verdict"></div>
+    <div class="magnitudle-score"><span id="score-value">0</span><span class="magnitudle-score-max">/100</span></div>
+    <div class="magnitudle-bar-track"><div id="score-bar" class="magnitudle-bar-fill"></div></div>
+
+    <div class="magnitudle-compare">
+      <div class="magnitudle-compare-col">
+        <span class="magnitudle-compare-label">Your guess</span>
+        <span id="guess-value" class="magnitudle-compare-value guess"></span>
+      </div>
+      <span class="magnitudle-compare-arrow" aria-hidden="true">&darr;</span>
+      <div class="magnitudle-compare-col right">
+        <span class="magnitudle-compare-label">Actual answer</span>
+        <span id="answer-value" class="magnitudle-compare-value"></span>
+      </div>
+    </div>
+
+    <div id="magnitude-badge" class="magnitudle-badge"></div>
+
+    <button id="share-btn" class="magnitudle-share-btn" type="button">
+      <span aria-hidden="true">&#8599;</span> Share with friends
+    </button>
+
+    <div class="magnitudle-fact-box">
+      <div class="magnitudle-fact-label"><span aria-hidden="true">&#128161;</span> Fun fact</div>
+      <p id="fun-fact" class="magnitudle-fact-text"></p>
+    </div>
+
+    <div class="magnitudle-source-box">
+      <div class="magnitudle-source-label">Source</div>
+      <p id="source-text" class="magnitudle-source-text"></p>
+    </div>
+
+    <p class="magnitudle-footer">Come back tomorrow for a new question!</p>
+  </div>
+
+</div>
+
+<script src="magnitudle-data.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
