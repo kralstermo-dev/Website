@@ -100,7 +100,7 @@ function verdictFor(score) {
   return "Yikes...";
 }
 
-function barColorFor(score) {
+function ringColorFor(score) {
   if (score >= 70) return "var(--correct)";
   if (score >= 40) return "var(--present)";
   return "var(--danger)";
@@ -119,7 +119,17 @@ const question = getTodaysQuestion(dayIndex);
 const questionNumber = dayIndex + 1;
 
 let progress = loadProgress();
+
+// The user's raw typed digits, kept as the single source of truth for
+// "what number did they actually type." The input box's *displayed*
+// text gets overwritten with the scaled-up value once a magnitude
+// button is pressed (e.g. "100" -> "100,000,000"), so re-reading the
+// base number from the DOM after that point would double-apply the
+// multiplier. Everything reads/writes rawValue instead.
+let rawValue = "";
 let multiplier = 1;
+
+const RING_CIRCUMFERENCE = 2 * Math.PI * 88;
 
 const els = {
   meta: document.getElementById("meta-row"),
@@ -132,11 +142,10 @@ const els = {
   input: document.getElementById("estimate-input"),
   preview: document.getElementById("estimate-preview"),
   previewValue: document.getElementById("estimate-preview-value"),
-  magRow: document.querySelector(".magnitudle-mag-row"),
   lockBtn: document.getElementById("lock-btn"),
   verdict: document.getElementById("verdict"),
   scoreValue: document.getElementById("score-value"),
-  scoreBar: document.getElementById("score-bar"),
+  scoreRingFill: document.getElementById("score-ring-fill"),
   guessValue: document.getElementById("guess-value"),
   answerValue: document.getElementById("answer-value"),
   magBadge: document.getElementById("magnitude-badge"),
@@ -159,8 +168,11 @@ function renderQuestion() {
 
 // ---------- input phase ----------
 
+// Reads the base number from `rawValue` (JS state), never from the
+// input's current displayed text - see the comment on `rawValue` above
+// for why that distinction matters.
 function getRawNumber() {
-  const raw = parseFloat(els.input.value.replace(/,/g, ""));
+  const raw = parseFloat(rawValue.replace(/,/g, ""));
   return isNaN(raw) || raw <= 0 ? null : raw;
 }
 
@@ -179,14 +191,17 @@ function refreshInputDisplay() {
 
 els.input.addEventListener("input", () => {
   if (els.input.readOnly) return;
+  rawValue = els.input.value;
   refreshInputDisplay();
 });
 
 els.input.addEventListener("click", () => {
   if (!els.input.readOnly) return;
-  // Unlock: drop back to raw editing mode at the current typed digits.
+  // Unlock: drop back to raw editing mode at the digits the person
+  // originally typed (not the scaled-up number currently on screen).
   multiplier = 1;
   document.querySelectorAll(".magnitudle-mag-btn").forEach(b => b.classList.remove("active"));
+  els.input.value = rawValue;
   els.input.readOnly = false;
   els.input.focus();
   refreshInputDisplay();
@@ -203,6 +218,7 @@ document.querySelectorAll(".magnitudle-mag-btn").forEach(btn => {
     if (isActive) {
       // toggled off - back to raw x1
       multiplier = 1;
+      els.input.value = rawValue;
       els.input.readOnly = false;
     } else {
       if (raw === null) { els.input.focus(); return; }
@@ -232,8 +248,12 @@ function showResult(guess) {
 
   els.verdict.textContent = verdictFor(score);
   els.scoreValue.textContent = score;
-  els.scoreBar.style.width = `${score}%`;
-  els.scoreBar.style.background = barColorFor(score);
+  els.scoreRingFill.style.stroke = ringColorFor(score);
+  // Animate from empty: force a reflow so the browser registers the
+  // dashoffset=full state before we transition it, or it just snaps.
+  els.scoreRingFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+  els.scoreRingFill.getBoundingClientRect();
+  els.scoreRingFill.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - score / 100));
 
   els.guessValue.textContent = `${humanizeFixed(guess)} ${question.unit}`;
   els.answerValue.textContent = `${humanizeFixed(question.answer)} ${question.unit}`;

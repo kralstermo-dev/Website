@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Magnitudle | Daily Games</title>
-<link rel="stylesheet" href="../../../styles/main.css?v=20">
+<link rel="stylesheet" href="../../../styles/main.css?v=21">
 </head>
 <body>
 
@@ -13,6 +13,8 @@
 </div>
 
 <div class="game-shell magnitudle-shell">
+<div class="magnitudle-glow" aria-hidden="true"></div>
+<div class="magnitudle-card">
 
   <div class="game-header-row">
     <h1 class="magnitudle-title">Daily Question</h1>
@@ -62,16 +64,27 @@
   <!-- ---------- result phase ---------- -->
   <div id="result-phase" class="hidden">
     <div id="verdict" class="magnitudle-verdict"></div>
-    <div class="magnitudle-score"><span id="score-value">0</span><span class="magnitudle-score-max">/100</span></div>
-    <div class="magnitudle-bar-track"><div id="score-bar" class="magnitudle-bar-fill"></div></div>
+
+    <div class="magnitudle-ring-wrap">
+      <svg class="magnitudle-ring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="magnitudle-ring-track" cx="100" cy="100" r="88"></circle>
+        <circle id="score-ring-fill" class="magnitudle-ring-fill" cx="100" cy="100" r="88"></circle>
+      </svg>
+      <div class="magnitudle-ring-center">
+        <span id="score-value">0</span>
+        <span class="magnitudle-score-max">/ 100</span>
+      </div>
+    </div>
 
     <div class="magnitudle-compare">
-      <div class="magnitudle-compare-col">
+      <div class="magnitudle-compare-card guess">
+        <span class="magnitudle-compare-icon" aria-hidden="true">&#127919;</span>
         <span class="magnitudle-compare-label">Your guess</span>
-        <span id="guess-value" class="magnitudle-compare-value guess"></span>
+        <span id="guess-value" class="magnitudle-compare-value"></span>
       </div>
-      <span class="magnitudle-compare-arrow" aria-hidden="true">&darr;</span>
-      <div class="magnitudle-compare-col right">
+      <span class="magnitudle-compare-arrow" aria-hidden="true">&harr;</span>
+      <div class="magnitudle-compare-card">
+        <span class="magnitudle-compare-icon" aria-hidden="true">&#10003;</span>
         <span class="magnitudle-compare-label">Actual answer</span>
         <span id="answer-value" class="magnitudle-compare-value"></span>
       </div>
@@ -97,8 +110,9 @@
   </div>
 
 </div>
+</div>
 
 <script src="magnitudle-data.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>
