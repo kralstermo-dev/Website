@@ -221,13 +221,12 @@ function onDragMove(e) {
   const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.005);
   globe.quaternion.premultiply(qY).premultiply(qX);
 
-  // Clamp vertical tilt: extract the "up" vector after this rotation,
-  // measure how far the pole has tilted, and push it back if over ±85 deg.
-  // This prevents flipping upside down while keeping horizontal rotation free.
+  // Clamp vertical tilt: if the north pole (up vector) dips below the
+  // equator plane (up.y < 0), the globe has flipped past 90 degrees.
+  // Undo only the vertical component of this drag step in that case,
+  // while keeping horizontal rotation completely free.
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(globe.quaternion);
-  const tilt = Math.asin(Math.max(-1, Math.min(1, up.y))); // angle of Y component
-  if (Math.abs(tilt) < toRad(5)) {
-    // Too close to upside down - undo the X component of this drag step
+  if (up.y < 0) {
     const qXUndo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -dy * 0.005);
     globe.quaternion.premultiply(qXUndo);
   }
@@ -271,8 +270,7 @@ function animate() {
       globe.quaternion.premultiply(qY).premultiply(qX);
       // Clamp vertical tilt during momentum too
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(globe.quaternion);
-      const tilt = Math.asin(Math.max(-1, Math.min(1, up.y)));
-      if (Math.abs(tilt) < toRad(5)) {
+      if (up.y < 0) {
         const qXUndo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -rotVel.x);
         globe.quaternion.premultiply(qXUndo);
         rotVel.x = 0;
