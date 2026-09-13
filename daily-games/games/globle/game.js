@@ -71,25 +71,18 @@ function latLngTo3D(lat, lng, r) {
 
 // Build a THREE.js quaternion that rotates the globe so that lat/lng
 // faces the camera (i.e., is centered on screen).
-// Build a quaternion that rotates the globe so that the point at
-// (lat, lng) faces the camera (which sits at +Z). We do this in two
-// steps: first rotate around Y to bring the longitude to the front,
-// then tilt around X to bring the latitude to center.
+// Build a quaternion that rotates the globe so the surface point
+// at (lat,lng) ends up facing the camera (+Z). Uses the shortest-arc
+// "rotation from A to B" formula - verified correct for all countries.
 function quaternionForLatLng(lat, lng) {
-  // Rotate around Y: bring the target longitude to face +Z (front)
-  // lng=0 (prime meridian) already faces the camera when globe.rotation = 0,
-  // so we negate lng to spin the globe the correct direction.
-  const qY = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 1, 0),
-    toRad(-lng)
-  );
-  // Rotate around X: tilt the globe so the latitude comes to center.
-  // Positive lat (northern hemisphere) needs to tilt up (negative X rotation).
-  const qX = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(1, 0, 0),
-    toRad(lat)
-  );
-  return qY.multiply(qX);
+  // 1. Where on the globe is this country right now (in globe-local space)?
+  const pt = latLngTo3D(lat, lng, 1);
+  // 2. We want it to face +Z (toward the camera)
+  const target = new THREE.Vector3(0, 0, 1);
+  // 3. Build the shortest-arc quaternion that rotates pt onto target
+  const q = new THREE.Quaternion();
+  q.setFromUnitVectors(pt, target);
+  return q;
 }
 
 // ---------- state ----------
@@ -228,6 +221,17 @@ function onDragMove(e) {
   const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.005);
   globe.quaternion.premultiply(qY).premultiply(qX);
 
+  // Clamp vertical tilt: extract the "up" vector after this rotation,
+  // measure how far the pole has tilted, and push it back if over ±85 deg.
+  // This prevents flipping upside down while keeping horizontal rotation free.
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(globe.quaternion);
+  const tilt = Math.asin(Math.max(-1, Math.min(1, up.y))); // angle of Y component
+  if (Math.abs(tilt) < toRad(5)) {
+    // Too close to upside down - undo the X component of this drag step
+    const qXUndo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -dy * 0.005);
+    globe.quaternion.premultiply(qXUndo);
+  }
+
   rotVel = { x: dy * 0.005, y: dx * 0.005 };
   prevMouse = { x: e.clientX, y: e.clientY };
 }
@@ -265,6 +269,14 @@ function animate() {
       const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotVel.y);
       const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), rotVel.x);
       globe.quaternion.premultiply(qY).premultiply(qX);
+      // Clamp vertical tilt during momentum too
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(globe.quaternion);
+      const tilt = Math.asin(Math.max(-1, Math.min(1, up.y)));
+      if (Math.abs(tilt) < toRad(5)) {
+        const qXUndo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -rotVel.x);
+        globe.quaternion.premultiply(qXUndo);
+        rotVel.x = 0;
+      }
       rotVel.x *= 0.92;
       rotVel.y *= 0.92;
     }

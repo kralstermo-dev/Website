@@ -277,7 +277,7 @@ function setup() {
   // Keep the crop point closer to center (35–65%) - leaves enough "overscan" at
   // every non-final zoom level that the flag always fully covers its frame.
   state.anchorX = 35 + (h % 31);
-  state.anchorY = 35 + ((h >> 8) % 31);
+  state.anchorY = 35 + ((h >>> 8) % 31);
 
   if (!modeSelectEl.dataset.built) {
     buildModeSelector();
