@@ -119,4 +119,16 @@ const PRIDE_FLAGS = [
     colors: ["#ff0000", "#ffffff", "#ffff00", "#000000"],
     meaning: "One of several designs used by Indigenous North American communities for Two-Spirit identity - a culturally specific term generally used only by Indigenous people.",
   },
+  {
+    id: "polysexual",
+    name: "Polysexual Flag",
+    colors: ["#F61BB9", "#07D669", "#1C92F5"],
+    meaning: "Pink for attraction to women, green for attraction to non-binary people, blue for attraction to men - multiple, but not all, genders.",
+  },
+  {
+    id: "bigender",
+    name: "Bigender Flag",
+    colors: ["#C178A0", "#EEA7CE", "#D6C8E9", "#FFFFFF", "#D6C8E9", "#9BC8E9", "#6D83D2"],
+    meaning: "the two pink stripes represent femininity, while the two blue stripes represent masculity. The two purple stripes may represent androgyny Lastly, the white may represent non-binary identities in general.",
+  },
 ];

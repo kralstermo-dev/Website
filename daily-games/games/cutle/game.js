@@ -243,23 +243,6 @@ function renderContent() {
     const { start, current } = dragState;
     lineSvg = `<line x1="${start.x.toFixed(1)}" y1="${start.y.toFixed(1)}" x2="${current.x.toFixed(1)}" y2="${current.y.toFixed(1)}" stroke="var(--ink-dim)" stroke-width="2" stroke-dasharray="6 5" />`;
   } else if (state.lastCut) {
-<<<<<<< HEAD
-    const { a, b, halfA, halfB, settled } = state.lastCut;
-    // Perpendicular to the cut, so the two halves pop apart sideways.
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const px = -dy / len, py = dx / len;
-    const offA = settled ? { x: px * SLICE_OFFSET, y: py * SLICE_OFFSET } : { x: 0, y: 0 };
-    const offB = settled ? { x: -px * SLICE_OFFSET, y: -py * SLICE_OFFSET } : { x: 0, y: 0 };
-
-    halvesSvg = `
-      <polygon id="cutle-half-a" points="${pointsAttr(halfA)}" fill="var(--accent)" opacity="0.55"
-        style="transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1); transform: translate(${offA.x.toFixed(2)}px, ${offA.y.toFixed(2)}px);" />
-      <polygon id="cutle-half-b" points="${pointsAttr(halfB)}" fill="var(--accent-2)" opacity="0.55"
-        style="transition: transform 0.45s cubic-bezier(0.34,1.56,0.64,1); transform: translate(${offB.x.toFixed(2)}px, ${offB.y.toFixed(2)}px);" />
-    `;
-    lineSvg = `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="var(--danger)" stroke-width="3" stroke-linecap="round" />`;
-=======
     const { halfA, halfB, settled, offA, offB } = state.lastCut;
     // If we've already animated once, start straight at the final
     // separated position - only a brand-new cut animates from zero.
@@ -275,7 +258,6 @@ function renderContent() {
       <polygon id="cutle-half-b" points="${pointsAttr(halfB)}" fill="var(--accent-2)" opacity="0.55" stroke="var(--ink)" stroke-width="2"
         transform="translate(${startB.x.toFixed(2)} ${startB.y.toFixed(2)})" />
     `;
->>>>>>> 934b386cef03364507c072c14bd87462492a5091
   }
 
   contentEl.innerHTML = `
@@ -284,15 +266,6 @@ function renderContent() {
     ${lineSvg}
   `;
 
-<<<<<<< HEAD
-  // First render after a fresh cut: the halves were just drawn at
-  // translate(0,0) - nudge them apart on the next frame so the CSS
-  // transition actually animates the "slice open" pop.
-  if (state.lastCut && !state.lastCut.settled) {
-    state.lastCut.settled = true;
-    requestAnimationFrame(() => requestAnimationFrame(renderContent));
-  }
-=======
   // First render after a fresh cut: animate the two halves apart by
   // hand, mutating the transform attribute directly frame by frame -
   // more reliable than a CSS transition on elements we keep rebuilding.
@@ -323,7 +296,6 @@ function animateSlice(elA, elB, offA, offB) {
     if (t < 1) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
->>>>>>> 934b386cef03364507c072c14bd87462492a5091
 }
 
 function commitCut(a, b) {
@@ -339,9 +311,6 @@ function commitCut(a, b) {
   const tier = tierFor(diff);
   const isCorrect = diff < 0.5;
 
-<<<<<<< HEAD
-  state.lastCut = { a, b, halfA, halfB, settled: false };
-=======
   // Perpendicular to the cut, so the two halves pop apart sideways.
   const dx = b.x - a.x, dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -350,7 +319,6 @@ function commitCut(a, b) {
   const offB = { x: -px * SLICE_OFFSET, y: -py * SLICE_OFFSET };
 
   state.lastCut = { a, b, halfA, halfB, offA, offB, settled: false };
->>>>>>> 934b386cef03364507c072c14bd87462492a5091
   state.guesses.push({ smaller, larger, diff, tier, isCorrect });
 
   renderContent();

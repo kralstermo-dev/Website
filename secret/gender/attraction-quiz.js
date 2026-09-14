@@ -60,6 +60,7 @@ const NODES = {
     text: "Are you attracted to more than one gender (or presentation)?",
     options: [
       { label: "Yes", next: "multiAll" },
+      { label: "Mostly one gender, but I'm somewhat open to others too", set: { flex: true }, next: "presentationCheck" },
       { label: "No", next: "presentationCheck" },
     ],
   },
@@ -109,6 +110,13 @@ const NODES = {
     text: "Are you attracted exclusively to men?",
     options: [
       { label: "Yes", next: "genderIsWoman2" },
+      { label: "No", next: "singleNonbinary" },
+    ],
+  },
+  singleNonbinary: {
+    text: "Are you attracted exclusively to non-binary or genderqueer people, based on their gender identity rather than how they present?",
+    options: [
+      { label: "Yes", set: { who: "skolio" }, next: "fluid" },
       { label: "No", next: "multiAll" },
     ],
   },
@@ -188,11 +196,14 @@ const START_NODE = "presence";
 // Per-axis display name + description for each "who"/presence result.
 const LABELS = {
   sexual: {
-    hetero: ["Straight", "You're attracted to a different gender than your own. Also called heterosexual."],
+    hetero: ["Heterosexual", "You're attracted to a different gender than your own. Also called straight."],
+    heteroFlex: ["Heteroflexible", "You're mostly attracted to a different gender than your own, but somewhat open to other genders too."],
     homoMen: ["Gay", "You're a man attracted to men."],
     homoWomen: ["Lesbian", "You're a woman attracted to women."],
+    homoFlex: ["Homoflexible", "You're mostly attracted to the same gender as your own, but somewhat open to other genders too."],
     trixic: ["Trixic", "A term some non-binary people use to describe being attracted to women."],
     toric: ["Toric", "A term some non-binary people use to describe being attracted to men."],
+    skolio: ["Skoliosexual", "You're attracted primarily to non-binary or genderqueer people, based on their gender identity rather than their presentation."],
     gyno: ["Gynosexual", "You're attracted to femininity itself, regardless of the other person's gender identity. Also called finsexual."],
     andro: ["Androsexual", "You're attracted to masculinity itself, regardless of the other person's gender identity. Also called minsexual."],
     cetero: ["Ceterosexual", "You're attracted to androgyny or non-binary presentation, typically not to strictly masculine or feminine presentation."],
@@ -216,6 +227,7 @@ const LABELS = {
     homoWomen: ["Homoromantic", "You're a woman who feels romantic attraction toward women."],
     trixic: ["Trixiromantic", "A term some non-binary people use to describe romantic attraction to women."],
     toric: ["Toriromantic", "A term some non-binary people use to describe romantic attraction to men."],
+    skolio: ["Skolioromantic", "You feel romantic attraction primarily toward non-binary or genderqueer people, based on their gender identity rather than their presentation."],
     gyno: ["Gyneromantic", "You feel romantic attraction toward femininity itself, regardless of the other person's gender identity."],
     andro: ["Androromantic", "You feel romantic attraction toward masculinity itself, regardless of the other person's gender identity."],
     cetero: ["Ceteroromantic", "You feel romantic attraction toward androgyny or non-binary presentation."],
@@ -302,13 +314,22 @@ els.backBtn.addEventListener("click", () => {
 function buildResult(answers) {
   const labels = LABELS[QUIZ_AXIS];
   const umbrella = UMBRELLA[QUIZ_AXIS];
-  const { presence, who, fluid, cupio } = answers;
+  const { presence, who, fluid, cupio, flex } = answers;
 
   let key;
   if (presence === "full") key = who;
   else if (presence === "none" && cupio) key = "cupio";
   else key = presence;
   if (!key || !labels[key]) key = "questioning";
+
+  let flexNoteNeeded = false;
+  if (presence === "full" && flex && (key === "hetero" || key === "homoMen" || key === "homoWomen")) {
+    if (QUIZ_AXIS === "sexual") {
+      key = key === "hetero" ? "heteroFlex" : "homoFlex";
+    } else {
+      flexNoteNeeded = true;
+    }
+  }
 
   const [display, baseDescription] = labels[key];
   // These presence types still walk the "who" sub-tree, so fold that
@@ -317,6 +338,9 @@ function buildResult(answers) {
   let description = baseDescription;
   if (foldsInWho && who && labels[who]) {
     description += ` When it does happen: ${labels[who][1].charAt(0).toLowerCase()}${labels[who][1].slice(1)}`;
+  }
+  if (flexNoteNeeded) {
+    description += " You're also somewhat open to other genders too.";
   }
 
   const umbrellaText = presence === "questioning" ? null : (presence === "full" ? umbrella.allo : umbrella.spec);
