@@ -1,13 +1,3 @@
-// ============================================================
-// MORSE CODE TRAINER - flashcard-style quiz for International
-// Morse Code. Two directions:
-//   toMorse   - shown a letter, tap out the dot/dash pattern
-//   toLetter  - shown (and hearable) a pattern, pick the letter
-// Patterns are drawn as little dot/dash shapes (see symbolHTML)
-// so they read clearly at any size, and can be played as real
-// beeps via the Web Audio API.
-// ============================================================
-
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 const KEY_ROWS = [
@@ -42,8 +32,6 @@ const chartToggle = document.getElementById("chart-toggle");
 const chartPanel = document.getElementById("chart-panel");
 const chartEl = document.getElementById("morse-chart");
 
-// ---------- rendering helpers ----------
-
 function symbolHTML(sym) {
   return `<span class="morse-symbol ${sym === "." ? "dot" : "dash"}"></span>`;
 }
@@ -59,8 +47,6 @@ function buildDisplayHTML(target, built) {
   }
   return html;
 }
-
-// ---------- audio ----------
 
 let audioCtx = null;
 function ensureAudio() {
@@ -93,8 +79,6 @@ function playCode(code) {
   });
 }
 
-// ---------- keyboard (toLetter mode) ----------
-
 function buildKeyboard() {
   keyboardEl.innerHTML = "";
   KEY_ROWS.forEach(row => {
@@ -111,8 +95,6 @@ function buildKeyboard() {
     keyboardEl.appendChild(rowEl);
   });
 }
-
-// ---------- question flow ----------
 
 function nextQuestion() {
   let pick = state.answer;
@@ -152,8 +134,6 @@ function registerResult(isCorrect) {
   updateStats();
 }
 
-// ---------- toLetter mode ----------
-
 function handleLetterAnswer(letter, btn) {
   if (state.locked) return;
   state.locked = true;
@@ -175,8 +155,6 @@ function handleLetterAnswer(letter, btn) {
     state.locked = false;
   }, 900);
 }
-
-// ---------- toMorse mode ----------
 
 function addSymbol(sym) {
   if (state.locked) return;
@@ -223,8 +201,6 @@ function submitMorse() {
   }, 1100);
 }
 
-// ---------- reveal / play ----------
-
 revealBtn.addEventListener("click", () => {
   if (state.locked) return;
   state.locked = true;
@@ -247,8 +223,6 @@ revealBtn.addEventListener("click", () => {
 playBtn.addEventListener("click", () => {
   playCode(MORSE[state.answer]);
 });
-
-// ---------- input wiring ----------
 
 dotBtn.addEventListener("click", () => addSymbol("."));
 dashBtn.addEventListener("click", () => addSymbol("-"));
@@ -293,9 +267,6 @@ function buildChart() {
   });
 }
 
-// Keyboard shortcuts:
-//   toMorse mode:  . = dot, - / _ = dash, Backspace = undo, Esc = clear
-//   toLetter mode: typing a letter answers directly
 document.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
 

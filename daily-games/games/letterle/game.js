@@ -1,16 +1,5 @@
-// ============================================================
-// LETTERLE - Wordle, but the "word" is a single letter, and there's
-// no guess cap. The board starts with one empty box; each guess fills
-// that box in and a fresh empty box appears below it for the next try.
-// With only one slot, scoring reduces to correct/absent - there's
-// nowhere else in a 1-letter word for a letter to be "elsewhere".
-// The keyboard turning gray as you eliminate letters is the whole game.
-// ============================================================
-
 const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
 
-// Pick today's letter deterministically, so everyone playing today
-// gets the same one - same technique as the other games.
 function getTodaysLetter() {
   const start = new Date(2024, 0, 1);
   const today = new Date();
@@ -29,7 +18,6 @@ const gridEl = document.getElementById("grid");
 const statusEl = document.getElementById("status");
 const playAgainBtn = document.getElementById("play-again");
 
-// Starts the board over with exactly one empty box.
 function buildGrid() {
   gridEl.innerHTML = "";
   addRow(0);
@@ -45,9 +33,6 @@ function addRow(r) {
   gridEl.appendChild(rowEl);
 }
 
-// As the board grows past a handful of guesses it can run longer than the
-// viewport - keep the newest box (and eventually the keyboard/play-again
-// button) in view instead of making the player scroll down manually.
 function scrollToBottom() {
   window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 }
@@ -78,7 +63,6 @@ function buildKeyboard() {
 }
 buildKeyboard();
 
-// The current guess-in-progress letter (not yet submitted).
 let pendingLetter = "";
 
 function handleKey(key) {
@@ -157,12 +141,10 @@ function submitGuess() {
 
   state.row++;
   pendingLetter = "";
-  addRow(state.row); // no guess cap - just keep growing the board
+  addRow(state.row);
   scrollToBottom();
 }
 
-// Same scoring shape as Wordle for consistency, even though with only one
-// slot it can only ever come out correct or absent (never present).
 function scoreGuess(guess, answer) {
   return guess === answer ? ["correct"] : ["absent"];
 }

@@ -1,9 +1,10 @@
-// ============================================================
-// MAGNITUDLE - question bank.
-// Each entry is one daily "how many X per day/year" estimate.
-// answer is the number the guess is scored against, in `unit`.
-// funFact and source are shown after answering.
-// ============================================================
+//  {
+//      question: "QUESTION?",
+//      unit: "UNIT",
+//      answer: AMOUNT,
+//      funFact: "FUN FACT",
+//      source: "SOURCE",
+//  },
 
 const MAGNITUDLE_QUESTIONS = [
   {

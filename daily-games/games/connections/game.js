@@ -1,11 +1,3 @@
-// ============================================================
-// CONNECTIONS - find four groups of four related words
-// A puzzle is picked deterministically each day (seeded, like the
-// other dailies) or freshly for a random round. Select 4 words and
-// submit; a full match peels that category off the top as a colored
-// banner. 4 wrong guesses and it's over.
-// ============================================================
-
 const MAX_MISTAKES = 4;
 const GROUP_SIZE = 4;
 const CATEGORY_COUNT = 4;
@@ -55,14 +47,12 @@ function randomSetup() {
   return { puzzle, order };
 }
 
-// ---------- state ----------
-
 const state = {
   puzzle: null,
   catMap: null,
-  order: [], // remaining, unsolved words in current grid order
-  solved: [], // category indices, in the order they were solved
-  selected: [], // words currently selected (max GROUP_SIZE)
+  order: [],
+  solved: [],
+  selected: [],
   mistakes: 0,
   gameOver: false,
 };
@@ -150,7 +140,6 @@ function endGame(won) {
   if (won) {
     showStatus("Solved it!");
   } else {
-    // reveal whatever's left, in category order
     for (let i = 0; i < CATEGORY_COUNT; i++) {
       if (!state.solved.includes(i)) state.solved.push(i);
     }

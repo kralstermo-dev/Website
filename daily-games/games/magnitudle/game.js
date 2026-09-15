@@ -1,14 +1,7 @@
-// ============================================================
-// MAGNITUDLE - daily estimation game.
-// One question a day (picked deterministically from the date,
-// like Wordle picks its word). Guess a number, optionally scale
-// it with a magnitude button, lock it in, and get scored 0-100
-// based on how many orders of magnitude away you were.
-// ============================================================
 
 const STORAGE_KEY = "magnitudle-progress";
-const EPOCH = new Date(2025, 0, 1); // day 1 of the puzzle numbering
-const MAX_ORDERS = 3; // being 1000x off (in either direction) scores 0
+const EPOCH = new Date(2025, 0, 1);
+const MAX_ORDERS = 3;
 
 function getDayIndex() {
   const today = new Date();
@@ -31,8 +24,6 @@ function loadProgress() {
 function saveProgress(p) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch (e) {}
 }
-
-// ---------- formatting helpers ----------
 
 function formatWithCommas(n) {
   return Math.round(n).toLocaleString("en-US");
@@ -59,10 +50,6 @@ function humanize(n) {
   return `${sign}${formatWithCommas(abs)}`;
 }
 
-// Same as humanize(), but always shows one decimal place at million+
-// scale (e.g. "20.0 million" instead of "20 million") - used in the
-// result screen's guess-vs-answer comparison, to match figures up
-// precisely digit-for-digit even when they land on a round number.
 function humanizeFixed(n) {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
@@ -80,8 +67,6 @@ function humanizeFixed(n) {
   }
   return `${sign}${formatWithCommas(abs)}`;
 }
-
-// ---------- scoring ----------
 
 function scoreGuess(guess, answer) {
   const safeGuess = Math.max(guess, 1e-9);
@@ -112,20 +97,11 @@ function magnitudeBadgeText(guess, answer, ordersOff) {
   return `${ordersOff.toFixed(1)} orders of magnitude ${direction}`;
 }
 
-// ---------- state ----------
-
 const dayIndex = getDayIndex();
 const question = getTodaysQuestion(dayIndex);
 const questionNumber = dayIndex + 1;
 
 let progress = loadProgress();
-
-// The user's raw typed digits, kept as the single source of truth for
-// "what number did they actually type." The input box's *displayed*
-// text gets overwritten with the scaled-up value once a magnitude
-// button is pressed (e.g. "100" -> "100,000,000"), so re-reading the
-// base number from the DOM after that point would double-apply the
-// multiplier. Everything reads/writes rawValue instead.
 let rawValue = "";
 let multiplier = 1;
 
@@ -166,11 +142,6 @@ function renderQuestion() {
   els.questionSub.textContent = `Enter an estimate in ${question.unit}.`;
 }
 
-// ---------- input phase ----------
-
-// Reads the base number from `rawValue` (JS state), never from the
-// input's current displayed text - see the comment on `rawValue` above
-// for why that distinction matters.
 function getRawNumber() {
   const raw = parseFloat(rawValue.replace(/,/g, ""));
   return isNaN(raw) || raw <= 0 ? null : raw;
@@ -197,8 +168,6 @@ els.input.addEventListener("input", () => {
 
 els.input.addEventListener("click", () => {
   if (!els.input.readOnly) return;
-  // Unlock: drop back to raw editing mode at the digits the person
-  // originally typed (not the scaled-up number currently on screen).
   multiplier = 1;
   document.querySelectorAll(".magnitudle-mag-btn").forEach(b => b.classList.remove("active"));
   els.input.value = rawValue;
@@ -216,7 +185,6 @@ document.querySelectorAll(".magnitudle-mag-btn").forEach(btn => {
     document.querySelectorAll(".magnitudle-mag-btn").forEach(b => b.classList.remove("active"));
 
     if (isActive) {
-      // toggled off - back to raw x1
       multiplier = 1;
       els.input.value = rawValue;
       els.input.readOnly = false;
@@ -238,8 +206,6 @@ els.lockBtn.addEventListener("click", () => {
   submitGuess(guess);
 });
 
-// ---------- result phase ----------
-
 function showResult(guess) {
   const { score, ordersOff } = scoreGuess(guess, question.answer);
 
@@ -249,8 +215,6 @@ function showResult(guess) {
   els.verdict.textContent = verdictFor(score);
   els.scoreValue.textContent = score;
   els.scoreRingFill.style.stroke = ringColorFor(score);
-  // Animate from empty: force a reflow so the browser registers the
-  // dashoffset=full state before we transition it, or it just snaps.
   els.scoreRingFill.style.strokeDashoffset = RING_CIRCUMFERENCE;
   els.scoreRingFill.getBoundingClientRect();
   els.scoreRingFill.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - score / 100));
@@ -296,18 +260,13 @@ els.shareBtn.addEventListener("click", async () => {
   } catch (e) {}
 });
 
-// ---------- help panel ----------
-
 els.helpBtn.addEventListener("click", () => {
   els.helpPanel.classList.toggle("hidden");
 });
 
-// ---------- init ----------
-
 renderQuestion();
 
 if (progress.lastDayIndex === dayIndex && typeof progress.guess === "number") {
-  // already played today - jump straight to the result
   renderMeta(progress.streak || 1);
   showResult(progress.guess);
 } else {

@@ -1,16 +1,3 @@
-// ============================================================
-// NERDLE - guess today's equation
-// Two modes:
-//  - Normal: fixed format NN[op]NN=NN (always 8 chars), one operator,
-//    e.g. "12+07=19".
-//  - Hard: A op B op C = DE (also 8 chars), TWO operators, evaluated
-//    with standard order of operations (* and / before + and -).
-// Both are fixed-position formats - that trades away real Nerdle's
-// fully variable-length terms for reliable validation/scoring - but
-// hard mode still lets you use two operators in one equation, unlike
-// normal mode.
-// ============================================================
-
 const EQ_LENGTH = 8;
 const MAX_GUESSES = 6;
 const OPERATORS = ["+", "-", "*", "/"];
@@ -20,15 +7,9 @@ function pad2(n) {
   return String(n).padStart(2, "0");
 }
 
-// ---------- GENERAL EQUATION VALIDATION (used for GUESSES in both modes) ----------
-// A guess just needs to be a true, 8-character equation - it doesn't have to
-// match the answer's exact shape (e.g. "12+34=46" is valid even in Hard mode,
-// which only generates two-operator ANSWERS but never required two-operator
-// GUESSES). Supports any number of +,-,*,/ terms with standard precedence.
-
 function evaluateExpression(left) {
   const tokens = left.match(/\d+|[+\-*/]/g);
-  if (!tokens || tokens.length % 2 === 0) return null; // must be num (op num)*
+  if (!tokens || tokens.length % 2 === 0) return null;
 
   let nums = [Number(tokens[0])];
   let ops = [];
@@ -37,7 +18,6 @@ function evaluateExpression(left) {
     nums.push(Number(tokens[i + 1]));
   }
 
-  // pass 1: all * and / , left to right
   for (let i = 0; i < ops.length; ) {
     if (ops[i] === "*" || ops[i] === "/") {
       const a = nums[i], b = nums[i + 1];
@@ -53,7 +33,6 @@ function evaluateExpression(left) {
       i++;
     }
   }
-  // pass 2: remaining + and -, left to right
   let result = nums[0];
   for (let i = 0; i < ops.length; i++) {
     result = ops[i] === "+" ? result + nums[i + 1] : result - nums[i + 1];
@@ -64,18 +43,16 @@ function evaluateExpression(left) {
 function isValidEquation(str) {
   if (str.length !== EQ_LENGTH) return false;
   const eqIdx = str.indexOf("=");
-  if (eqIdx === -1 || str.indexOf("=", eqIdx + 1) !== -1) return false; // exactly one '='
+  if (eqIdx === -1 || str.indexOf("=", eqIdx + 1) !== -1) return false;
 
   const left = str.slice(0, eqIdx);
   const right = str.slice(eqIdx + 1);
   if (!/^\d+$/.test(right)) return false;
-  if (!/^\d+([+\-*/]\d+)+$/.test(left)) return false; // needs at least one operator
+  if (!/^\d+([+\-*/]\d+)+$/.test(left)) return false;
 
   const result = evaluateExpression(left);
   return result !== null && result >= 0 && result === Number(right);
 }
-
-// ---------- NORMAL MODE ANSWER POOL: NN[op]NN=NN ----------
 
 function buildNormalPool() {
   const byOp = { "+": [], "-": [], "*": [], "/": [] };
@@ -86,7 +63,7 @@ function buildNormalPool() {
         if (op === "+") result = a + b;
         else if (op === "-") result = a - b;
         else if (op === "*") result = a * b;
-        else { // division - must be a clean, positive integer result
+        else {
           if (a % b !== 0) continue;
           result = a / b;
         }
@@ -98,20 +75,15 @@ function buildNormalPool() {
   return byOp;
 }
 
-// ---------- HARD MODE ANSWER POOL: A op B op C = DE (two operators) ----------
-
 function precedence(op) {
   return (op === "*" || op === "/") ? 2 : 1;
 }
 
-// Evaluates a op1 b op2 c respecting standard order of operations
-// (multiplication/division before addition/subtraction). Returns null
-// for invalid operations (division by zero or non-integer division).
 function applyOp(x, op, y) {
   if (op === "+") return x + y;
   if (op === "-") return x - y;
   if (op === "*") return x * y;
-  return (y !== 0 && x % y === 0) ? x / y : null; // division
+  return (y !== 0 && x % y === 0) ? x / y : null;
 }
 
 function evalTwoOp(a, op1, b, op2, c) {
@@ -133,7 +105,7 @@ function buildHardPool() {
       for (let b = 0; b <= 9; b++) {
         for (const op2 of OPERATORS) {
           for (let c = 0; c <= 9; c++) {
-            if ([a, b, c].filter(n => n === 0).length >= 2) continue; // skip overly trivial equations
+            if ([a, b, c].filter(n => n === 0).length >= 2) continue;
             const result = evalTwoOp(a, op1, b, op2, c);
             if (result === null || result < 0 || result > 99) continue;
             byOp[op1].push(`${a}${op1}${b}${op2}${c}=${pad2(result)}`);
@@ -144,8 +116,6 @@ function buildHardPool() {
   }
   return byOp;
 }
-
-// ---------- MODE CONFIG ----------
 
 const MODES = {
   normal: {
@@ -162,12 +132,6 @@ const MODES = {
   },
 };
 
-// Picking from a flat, structurally-ordered pool by day-index alone can
-// still land on long same-operator runs, since the pool was built in
-// operator-grouped order. Instead, the day-index explicitly cycles through
-// the 4 operators first (so you're guaranteed +, -, *, / in rotation, never
-// the same one two days running), then a large-prime multiply picks a
-// varied specific equation *within* that operator's bucket.
 const SHUFFLE_PRIME = 104729;
 
 function getTodaysEquation(modeId) {
@@ -337,7 +301,6 @@ function submitGuess() {
   }
 }
 
-// Same duplicate-aware scoring as Wordle: correct > present > absent.
 function scoreGuess(guess, answer) {
   const result = Array(EQ_LENGTH).fill("absent");
   const answerChars = answer.split("");
@@ -410,7 +373,7 @@ function buildModeSelector() {
       if (btn.dataset.mode === state.mode) return;
       state.mode = btn.dataset.mode;
       localStorage.setItem(MODE_STORAGE_KEY, state.mode);
-      resetRound(false); // fresh round in the new mode, using today's equation for it
+      resetRound(false);
     });
   });
 }
@@ -424,9 +387,6 @@ function applyModeUI() {
   modeDescEl.textContent = MODES[state.mode].desc;
 }
 
-// random=true picks a random equation (the "play again" button);
-// random=false picks today's equation for whichever mode is now active
-// (used right after switching modes).
 function resetRound(random) {
   state.answer = random
     ? randomEquation(state.mode)

@@ -1,15 +1,3 @@
-// ============================================================
-// GLOBLE - 3D globe with country highlighting
-// Features:
-// - Slow auto-spin until first guess, then stops
-// - Camera smoothly pans to each guessed country
-// - Shows distance in km or miles (settings toggle)
-// - Detects and announces when a guess borders the answer
-// - Highlights the guessed country's polygon on the globe
-// ============================================================
-
-// ---------- settings ----------
-
 const SETTINGS_KEY = "globle-settings";
 function loadSettings() {
   try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; }
@@ -18,8 +6,6 @@ function loadSettings() {
 function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 
 let settings = { units: "km", ...loadSettings() };
-
-// ---------- geo math ----------
 
 function dayIndex(offset) {
   const start = new Date(2024, 0, 1);
@@ -58,7 +44,6 @@ function isBordering(nameA, nameB) {
   return neighbors.includes(nameB);
 }
 
-// Convert lat/lng to a 3D position on the sphere (Three.js Y-up convention)
 function latLngTo3D(lat, lng, r) {
   const phi   = toRad(90 - lat);
   const theta = toRad(lng + 180);
@@ -69,35 +54,23 @@ function latLngTo3D(lat, lng, r) {
   );
 }
 
-// Build a THREE.js quaternion that rotates the globe so that lat/lng
-// faces the camera (i.e., is centered on screen).
-// Build a quaternion that rotates the globe so the surface point
-// at (lat,lng) ends up facing the camera (+Z). Uses the shortest-arc
-// "rotation from A to B" formula - verified correct for all countries.
 function quaternionForLatLng(lat, lng) {
-  // 1. Where on the globe is this country right now (in globe-local space)?
   const pt = latLngTo3D(lat, lng, 1);
-  // 2. We want it to face +Z (toward the camera)
   const target = new THREE.Vector3(0, 0, 1);
-  // 3. Build the shortest-arc quaternion that rotates pt onto target
   const q = new THREE.Quaternion();
   q.setFromUnitVectors(pt, target);
   return q;
 }
-
-// ---------- state ----------
 
 const state = {
   answer: getTodaysCountry(),
   guesses: [],
   gameOver: false,
   spinning: true,
-  panTarget: null,    // quaternion to animate toward
+  panTarget: null,
   panProgress: 0,
   panFrom: null,
 };
-
-// ---------- DOM ----------
 
 const canvasContainer  = document.getElementById("globle-map");
 const attemptsEl       = document.getElementById("attempts-left");
@@ -115,7 +88,6 @@ unitsSelect.value = settings.units;
 unitsSelect.addEventListener("change", () => {
   settings.units = unitsSelect.value;
   saveSettings(settings);
-  // Rerender existing rows with the new unit
   rebuildGuessList();
 });
 
@@ -127,8 +99,6 @@ function showStatus(msg, isError = false) {
   statusEl.textContent = msg;
   statusEl.classList.toggle("error", isError);
 }
-
-// ---------- Three.js scene ----------
 
 const GLOBE_R = 1;
 const DOT_R   = 0.032;
@@ -161,7 +131,6 @@ function initGlobe() {
   dir.position.set(5, 3, 5);
   scene.add(dir);
 
-  // Globe
   const geo = new THREE.SphereGeometry(GLOBE_R, 64, 64);
   const loader = new THREE.TextureLoader();
   const tex = loader.load(
@@ -172,19 +141,16 @@ function initGlobe() {
   globe = new THREE.Mesh(geo, new THREE.MeshPhongMaterial({ map: tex, specular: 0x222222 }));
   scene.add(globe);
 
-  // Atmosphere
   const atmoGeo = new THREE.SphereGeometry(GLOBE_R * 1.015, 32, 32);
   scene.add(new THREE.Mesh(atmoGeo, new THREE.MeshPhongMaterial({
     color: 0x4488ff, transparent: true, opacity: 0.08,
   })));
 
-  // Groups parented to globe so they rotate with it
   dotGroup       = new THREE.Group();
   highlightGroup = new THREE.Group();
   globe.add(dotGroup);
   globe.add(highlightGroup);
 
-  // Drag events
   renderer.domElement.addEventListener("mousedown",  onDragStart);
   renderer.domElement.addEventListener("mousemove",  onDragMove);
   renderer.domElement.addEventListener("mouseup",    onDragEnd);
@@ -207,7 +173,7 @@ function onDragStart(e) {
   isDragging = true;
   prevMouse = { x: e.clientX, y: e.clientY };
   rotVel = { x: 0, y: 0 };
-  state.panTarget = null; // cancel any ongoing pan
+  state.panTarget = null;
 }
 
 function onDragMove(e) {
@@ -215,16 +181,10 @@ function onDragMove(e) {
   const dx = e.clientX - prevMouse.x;
   const dy = e.clientY - prevMouse.y;
 
-  // Apply rotation as quaternion deltas so it stays consistent with
-  // the pan system - never touch globe.rotation.x/y directly
   const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * 0.005);
   const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.005);
   globe.quaternion.premultiply(qY).premultiply(qX);
 
-  // Clamp vertical tilt: if the north pole (up vector) dips below the
-  // equator plane (up.y < 0), the globe has flipped past 90 degrees.
-  // Undo only the vertical component of this drag step in that case,
-  // while keeping horizontal rotation completely free.
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(globe.quaternion);
   if (up.y < 0) {
     const qXUndo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -dy * 0.005);
@@ -237,7 +197,6 @@ function onDragMove(e) {
 
 function onDragEnd() { isDragging = false; }
 
-// Smoothly slerp the globe rotation to face a target lat/lng
 function panTo(lat, lng) {
   state.panFrom     = globe.quaternion.clone();
   state.panTarget   = quaternionForLatLng(lat, lng);
@@ -248,11 +207,9 @@ function animate() {
   requestAnimationFrame(animate);
 
   if (state.spinning && !isDragging && !state.panTarget) {
-    // Slow auto-spin before first guess - use quaternion delta
     const qSpin = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.001);
     globe.quaternion.premultiply(qSpin);
   } else if (state.panTarget) {
-    // Smooth pan to guessed country
     state.panProgress += 0.03;
     if (state.panProgress >= 1) {
       state.panProgress = 1;
@@ -263,12 +220,10 @@ function animate() {
     }
     rotVel = { x: 0, y: 0 };
   } else if (!isDragging) {
-    // Momentum decay after a flick-drag - also quaternion deltas
     if (Math.abs(rotVel.x) > 0.0001 || Math.abs(rotVel.y) > 0.0001) {
       const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotVel.y);
       const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), rotVel.x);
       globe.quaternion.premultiply(qY).premultiply(qX);
-      // Clamp vertical tilt during momentum too
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(globe.quaternion);
       if (up.y < 0) {
         const qXUndo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -rotVel.x);
@@ -283,13 +238,10 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// ---------- country highlight ----------
-
-// Draw a country's polygon outline as a line on the globe surface
 function highlightCountry(name, color) {
   if (!COUNTRY_POLYS[name]) return;
   const mat = new THREE.LineBasicMaterial({ color, linewidth: 2 });
-  const R = GLOBE_R + 0.002; // just above surface
+  const R = GLOBE_R + 0.002;
 
   COUNTRY_POLYS[name].forEach(polygon => {
     polygon.forEach(ring => {
@@ -308,8 +260,6 @@ function clearHighlights() {
   }
 }
 
-// ---------- dots ----------
-
 function addDot(lat, lng, color) {
   const pos = latLngTo3D(lat, lng, GLOBE_R + DOT_R * 0.5);
   const dot = new THREE.Mesh(
@@ -319,8 +269,6 @@ function addDot(lat, lng, color) {
   dot.position.copy(pos);
   dotGroup.add(dot);
 }
-
-// ---------- guess list ----------
 
 function arrowSvg(deg) {
   return `<svg viewBox="0 0 24 24" width="18" height="18" style="transform:rotate(${deg}deg)"><path d="M12 2 L19 21 L12 17 L5 21 Z" fill="currentColor"/></svg>`;
@@ -347,13 +295,10 @@ function buildGuessRow(g) {
 
 function rebuildGuessList() {
   guessList.innerHTML = "";
-  // Guesses are prepended so newest is at top - rebuild in reverse
   [...state.guesses].reverse().forEach(g => {
     guessList.appendChild(buildGuessRow(g));
   });
 }
-
-// ---------- autocomplete ----------
 
 let currentOptions = [], activeIndex = -1;
 
@@ -401,8 +346,6 @@ document.addEventListener("click", e => {
   if (!e.target.closest(".autocomplete")) autocompleteList.classList.add("hidden");
 });
 
-// ---------- guess submission ----------
-
 guessForm.addEventListener("submit", e => {
   e.preventDefault();
   if (state.gameOver) return;
@@ -416,7 +359,7 @@ guessForm.addEventListener("submit", e => {
   guessInput.value = "";
   autocompleteList.classList.add("hidden");
 
-  if (state.guesses.length === 0) state.spinning = false; // stop auto-spin
+  if (state.guesses.length === 0) state.spinning = false;
 
   const isCorrect = country.code === state.answer.code;
   const km  = distanceKm(country, state.answer);
@@ -429,7 +372,6 @@ guessForm.addEventListener("submit", e => {
 
   addDot(country.lat, country.lng, dotColor);
 
-  // Highlight the country border, then pan to it
   clearHighlights();
   const borderColor = isCorrect ? 0x5fb87a : dotColor.getHex ? dotColor.getHex() : dotColor;
   highlightCountry(country.name, borderColor);
@@ -466,5 +408,4 @@ playAgainBtn.addEventListener("click", () => {
   attemptsEl.textContent = "0 guesses";
 });
 
-// ---------- boot ----------
 initGlobe();

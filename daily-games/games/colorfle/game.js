@@ -1,19 +1,5 @@
-// ============================================================
-// COLORFLE
-// Three modes:
-//  - Normal: pick which 3 palette colors go in which of 3 fixed
-//    size slots (small/medium/large) to match the mixed target color.
-//    Scored like Wordle: green = right color in the right slot,
-//    yellow = right color, wrong slot, gray = not part of the mix.
-//  - Hard: same idea with 4 colors / 4 size slots.
-//  - Impossible: free-form hex-code guessing (the original mode)  - 
-//    genuinely much harder since there's no fixed palette to reason from.
-// ============================================================
-
 const MAX_GUESSES = 6;
 const MODE_STORAGE_KEY = "colorfle-mode";
-
-// ---------- shared helpers ----------
 
 function mulberry32(seed) {
   return function () {
@@ -46,8 +32,6 @@ function dayIndex(offset) {
   const today = new Date();
   return Math.floor((today - start) / (1000 * 60 * 60 * 24)) + offset;
 }
-
-// ---------- MIX modes (Normal / Hard) ----------
 
 const PALETTE = [
   { id: "white",    hex: "#FFFFFF" }, { id: "cream",   hex: "#FFF3B0" },
@@ -113,8 +97,6 @@ function scoreMixGuess(guessIds, answerIds) {
   });
 }
 
-// ---------- HEX mode (Impossible) ----------
-
 function getTodaysColor() {
   const rng = mulberry32(dayIndex(214));
   return {
@@ -142,8 +124,6 @@ function parseHex(str) {
   };
 }
 
-// Tiered closeness per channel - direction plus a rough magnitude bucket,
-// not the exact numeric difference (keeps some guessing challenge).
 function channelFeedback(guessVal, answerVal) {
   const diff = guessVal - answerVal;
   if (diff === 0) return { tier: "correct", dir: "exact" };
@@ -156,17 +136,11 @@ function channelFeedback(guessVal, answerVal) {
 
 const ARROW = { higher: "&uarr;", lower: "&darr;", exact: "&check;" };
 
-// ---------- MODE CONFIG (for the tab selector) ----------
-
 const MODES = [
   { id: "normal", label: "Normal", kind: "mix", desc: "Pick which 3 colors go in the Small/Medium/Large slots to match the mix." },
   { id: "hard", label: "Hard", kind: "mix", desc: "Same idea with 4 colors and 4 size slots - Small through XL." },
   { id: "impossible", label: "Impossible", kind: "hex", desc: "No palette this time - guess the exact hex code in 6 tries." },
 ];
-
-// ============================================================
-// STATE + DOM
-// ============================================================
 
 const state = {
   mode: "normal",
@@ -203,10 +177,6 @@ function showStatus(msg, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-// ============================================================
-// MODE SELECTOR
-// ============================================================
-
 function buildModeSelector() {
   modeSelectEl.innerHTML = MODES.map(m =>
     `<button class="mode-btn${m.id === state.mode ? " active" : ""}" data-mode="${m.id}" role="tab" aria-selected="${m.id === state.mode}">${m.label}</button>`
@@ -225,13 +195,6 @@ function currentModeInfo() {
   return MODES.find(m => m.id === state.mode);
 }
 
-// ============================================================
-// ROUND LIFECYCLE
-// ============================================================
-
-// random=true starts a fresh random round in the active mode (play again);
-// random=false starts today's round for whichever mode is now active
-// (used on first load and right after switching modes).
 function startRound(random) {
   const info = currentModeInfo();
   modeSelectEl.querySelectorAll(".mode-btn").forEach(btn => {
@@ -272,10 +235,6 @@ function startRound(random) {
 }
 
 playAgainBtns.forEach(b => b.addEventListener("click", () => startRound(true)));
-
-// ============================================================
-// MIX MODE UI
-// ============================================================
 
 function renderMixSlots() {
   const cfg = MIX_CONFIG[state.mode];
@@ -382,10 +341,6 @@ function endMixGame(won) {
   showStatus(won ? "Solved! 🎉" : `The mix was ${names}`);
 }
 
-// ============================================================
-// HEX MODE (IMPOSSIBLE) UI
-// ============================================================
-
 function renderHexGuess(guessColor, pct, isCorrect) {
   const row = document.createElement("div");
   row.className = "colorfle-row" + (isCorrect ? " correct" : "");
@@ -444,10 +399,6 @@ function endHexGame(won) {
   hexLabelEl.textContent = toHex(state.hexAnswer);
   showStatus(won ? "Solved! 🎉" : `The color was ${toHex(state.hexAnswer)}`);
 }
-
-// ============================================================
-// INIT
-// ============================================================
 
 try {
   buildModeSelector();

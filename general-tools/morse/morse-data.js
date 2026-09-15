@@ -1,4 +1,3 @@
-// International Morse Code, A-Z.
 const MORSE = {
   A: ".-",    B: "-...",  C: "-.-.",  D: "-..",   E: ".",
   F: "..-.",  G: "--.",   H: "....",  I: "..",    J: ".---",

@@ -1,12 +1,3 @@
-// ============================================================
-// ANGLE - guess the degree measure of the angle shown
-// Two rays from a shared vertex form an angle with no markings - you
-// guess its measure in degrees. The pair can face any direction (not
-// anchored to a fixed axis), and a small arc between them marks the
-// swept angle. Feedback is a warmer/colder tier plus a direction hint
-// (which way to adjust your next guess).
-// ============================================================
-
 const MAX_GUESSES = 6;
 
 function mulberry32(seed) {
@@ -24,13 +15,10 @@ function dayIndex(offset) {
   return Math.floor((today - start) / (1000 * 60 * 60 * 24)) + offset;
 }
 
-// angle: kept away from 0/360 (degenerate, rays overlap) so it always
-// looks like a real angle. rotation: where the whole pair points, so
-// the diagram isn't always anchored the same way.
 function getTodaysAngle() {
   const rng = mulberry32(dayIndex(452));
   return {
-    angle: 5 + Math.floor(rng() * 351), // 5..355
+    angle: 5 + Math.floor(rng() * 351),
     rotation: Math.floor(rng() * 360),
   };
 }
@@ -47,12 +35,11 @@ function angularDiff(a, b) {
   return d > 180 ? 360 - d : d;
 }
 
-// Which way (in guessed degrees) gets you to the answer fastest.
 function angularDirection(guess, answer) {
   let d = (answer - guess) % 360;
   if (d > 180) d -= 360;
   if (d < -180) d += 360;
-  return d; // positive = guess higher next time, negative = guess lower
+  return d;
 }
 
 function tierFor(diff) {
@@ -81,8 +68,6 @@ function showStatus(msg, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
-// Vertex centered in the viewBox so a ray can point in ANY direction
-// without ever getting clipped by the box edges.
 const CX = 150, CY = 150, R = 130;
 const ARC_R = 42;
 
@@ -91,8 +76,6 @@ function rayEndpoint(deg, radius = R) {
   return { x: CX + radius * Math.cos(rad), y: CY - radius * Math.sin(rad) };
 }
 
-// A small arc between the two rays (not a full circle) marking the
-// swept angle - matches how a protractor shows an angle.
 function arcPath(ray1Deg, ray2Deg, angleDeg) {
   const p1 = rayEndpoint(ray1Deg, ARC_R);
   const p2 = rayEndpoint(ray2Deg, ARC_R);
@@ -100,10 +83,6 @@ function arcPath(ray1Deg, ray2Deg, angleDeg) {
   return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A ${ARC_R} ${ARC_R} 0 ${largeArcFlag} 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
 }
 
-// The target angle's two rays are always visible - Angle is a visual
-// estimation game, not a hidden-answer one like Wordle/Flagle, so
-// there's nothing to reveal later. Past guesses are NOT drawn on the
-// diagram - only the puzzle itself shows.
 function renderDiagram() {
   const ray1Deg = state.answer.rotation;
   const ray2Deg = state.answer.rotation - state.answer.angle;

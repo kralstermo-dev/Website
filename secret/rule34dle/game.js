@@ -1,10 +1,5 @@
-// ============================================================
-// RULE34DLE — higher / lower + Daily mode + SFW avatars
-// ============================================================
-
 const DAILY_ROUNDS = 10;
 
-// ---------- seeded RNG (for daily mode) ----------
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++) {
@@ -34,9 +29,8 @@ function todayKey() {
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
 
-// ---------- state ----------
 const state = {
-  mode: "daily",          // "daily" | "endless"
+  mode: "daily",
   left: null,
   right: null,
   streak: 0,
@@ -79,8 +73,7 @@ function formatCount(n) {
 function escapeHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
-
-// Consistent color from name
+ 
 function colorFromName(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
@@ -95,12 +88,10 @@ function initials(name) {
 }
 
 function avatarHtml(char) {
-  // Prefer explicit SFW image if provided
   if (char.img) {
     return `<img class="r34-avatar-img" src="${escapeHtml(char.img)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <span class="r34-avatar-letter" style="display:none;background:${colorFromName(char.name)}">${escapeHtml(initials(char.name))}</span>`;
   }
-  // SFW letter avatar (always works offline)
   return `<span class="r34-avatar-letter" style="background:${colorFromName(char.name)}">${escapeHtml(initials(char.name))}</span>`;
 }
 
@@ -233,7 +224,6 @@ function startMode(mode) {
 
   if (mode === "daily") {
     state.rng = makeRng("r34dle-" + todayKey());
-    // consume a few values so first pair isn't always the same index pattern
     for (let i = 0; i < 3; i++) state.rng();
   } else {
     state.rng = null;
@@ -243,7 +233,6 @@ function startMode(mode) {
   modeEndless.classList.toggle("active", mode === "endless");
   document.getElementById("round-label").style.display = mode === "daily" ? "" : "none";
 
-  // restore daily progress if already finished today
   const finishedKey = "r34dle-daily-finished-" + todayKey();
   if (mode === "daily" && localStorage.getItem(finishedKey)) {
     state.dailyDone = true;
@@ -287,7 +276,6 @@ shareBtn.addEventListener("click", async () => {
   }
 });
 
-// mark daily finished when it ends
 function markDailyFinished() {
   if (state.mode !== "daily") return;
   localStorage.setItem("r34dle-daily-finished-" + todayKey(), "1");

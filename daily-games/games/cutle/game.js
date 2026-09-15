@@ -1,17 +1,8 @@
-// ============================================================
-// CUTLE - slice a random shape into two equal halves
-// A convex "blob" is generated each day (seeded, like the other
-// dailies) or freshly for a random round. Drag a straight line across
-// it - starting and ending outside the shape, like a real knife
-// stroke - and the game clips the shape along that line to report
-// what percentage of the area landed on each side. Get as close to a
-// 50/50 split as you can within 5 cuts.
-// ============================================================
 
 const MAX_GUESSES = 5;
 const CX = 150, CY = 150;
 const SHAPE_R = 110;
-const SLICE_OFFSET = 14; // px the two halves pop apart on a committed cut
+const SLICE_OFFSET = 14;
 
 function mulberry32(seed) {
   return function () {
@@ -28,15 +19,10 @@ function dayIndex(offset) {
   return Math.floor((today - start) / (1000 * 60 * 60 * 24)) + offset;
 }
 
-// ---------- geometry helpers ----------
-
 function cross(o, a, b) {
   return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 }
 
-// Monotone-chain convex hull - turns a cloud of sample points into the
-// convex polygon around them, so any straight cut always produces
-// exactly two clean pieces (no weird multi-part slices).
 function convexHull(points) {
   const pts = points.slice().sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
   const n = pts.length;
@@ -65,7 +51,6 @@ function polygonArea(poly) {
   return Math.abs(a) / 2;
 }
 
-// Which side of the infinite line through a->b a point falls on.
 function side(p, a, b) {
   return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
 }
@@ -79,8 +64,6 @@ function lineIntersect(p1, p2, p3, p4) {
   return { x: p1.x + t * d1x, y: p1.y + t * d1y };
 }
 
-// Sutherland-Hodgman clip of a convex polygon against the half-plane
-// on one side of the cutting line a->b.
 function clipHalf(poly, a, b, keepPositive) {
   const out = [];
   const n = poly.length;
@@ -96,9 +79,6 @@ function clipHalf(poly, a, b, keepPositive) {
   return out;
 }
 
-// Ray-casting point-in-polygon test, used to require that a cut starts
-// and ends outside the shape - like an actual knife stroke that
-// enters and exits, rather than a partial cut stranded inside it.
 function pointInPolygon(p, poly) {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -110,10 +90,6 @@ function pointInPolygon(p, poly) {
   return inside;
 }
 
-// ---------- shape generation ----------
-
-// Convex hull of a scatter of points sampled uniformly inside a disk -
-// gives an irregular, organic-looking "blob" that's always convex.
 function shapeFromRng(rng) {
   const pts = [];
   const SAMPLES = 26;
@@ -141,14 +117,12 @@ function tierFor(diff) {
   return "cold";
 }
 
-// ---------- state ----------
-
 const state = {
   shape: getTodaysShape(),
   area: 0,
   guesses: [],
   gameOver: false,
-  lastCut: null, // { a, b, halfA, halfB, settled } after a committed cut
+  lastCut: null,
 };
 state.area = polygonArea(state.shape);
 
@@ -159,7 +133,7 @@ const guessList = document.getElementById("guess-list");
 const playAgainBtn = document.getElementById("play-again");
 
 let svgEl = null;
-let dragState = null; // { start, current }
+let dragState = null;
 
 function showStatus(msg, isError = false) {
   statusEl.textContent = msg;
@@ -170,9 +144,6 @@ function pointsAttr(poly) {
   return poly.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 }
 
-// The outer <svg> + capture rect are created once and never replaced,
-// so pointer capture survives every re-render while dragging - only
-// the inner <g> content is rewritten per frame.
 function initDiagram() {
   diagramEl.innerHTML = `
     <svg id="cutle-svg" viewBox="0 0 300 300" width="100%" height="100%" style="touch-action:none; display:block;">
@@ -200,7 +171,7 @@ function onPointerDown(e) {
   e.preventDefault();
   const p = toSvgPoint(e);
   dragState = { start: p, current: p };
-  state.lastCut = null; // starting a fresh cut - drop the old one's visuals
+  state.lastCut = null;
   svgEl.setPointerCapture(e.pointerId);
   showStatus("");
   renderContent();
@@ -239,19 +210,12 @@ function renderContent() {
   let lineSvg = "";
 
   if (dragState) {
-    // Only the literal segment the person is dragging - no extension.
     const { start, current } = dragState;
     lineSvg = `<line x1="${start.x.toFixed(1)}" y1="${start.y.toFixed(1)}" x2="${current.x.toFixed(1)}" y2="${current.y.toFixed(1)}" stroke="var(--ink-dim)" stroke-width="2" stroke-dasharray="6 5" />`;
   } else if (state.lastCut) {
     const { halfA, halfB, settled, offA, offB } = state.lastCut;
-    // If we've already animated once, start straight at the final
-    // separated position - only a brand-new cut animates from zero.
     const startA = settled ? offA : { x: 0, y: 0 };
     const startB = settled ? offB : { x: 0, y: 0 };
-
-    // Each half carries its own stroke (including the fresh cut edge,
-    // which is already part of its boundary from the clip) so the
-    // outline travels with the piece instead of staying behind.
     halvesSvg = `
       <polygon id="cutle-half-a" points="${pointsAttr(halfA)}" fill="var(--accent)" opacity="0.55" stroke="var(--ink)" stroke-width="2"
         transform="translate(${startA.x.toFixed(2)} ${startA.y.toFixed(2)})" />
@@ -266,9 +230,6 @@ function renderContent() {
     ${lineSvg}
   `;
 
-  // First render after a fresh cut: animate the two halves apart by
-  // hand, mutating the transform attribute directly frame by frame -
-  // more reliable than a CSS transition on elements we keep rebuilding.
   if (state.lastCut && !state.lastCut.settled) {
     state.lastCut.settled = true;
     const elA = document.getElementById("cutle-half-a");
@@ -278,7 +239,6 @@ function renderContent() {
   }
 }
 
-// Eases past the target and settles back, like a piece popping open.
 function easeOutBack(t) {
   const c1 = 1.70158, c3 = c1 + 1;
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
@@ -310,8 +270,6 @@ function commitCut(a, b) {
   const diff = 50 - smaller;
   const tier = tierFor(diff);
   const isCorrect = diff < 0.5;
-
-  // Perpendicular to the cut, so the two halves pop apart sideways.
   const dx = b.x - a.x, dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   const px = -dy / len, py = dx / len;

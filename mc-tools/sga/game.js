@@ -1,30 +1,12 @@
-// ============================================================
-// SGA TRAINER - flashcard-style quiz for the Standard Galactic
-// Alphabet (the rune font shown around Minecraft's enchanting
-// table, originally from Commander Keen). Two directions:
-//   toLetter  - shown a symbol, pick the Latin letter
-//   toSymbol  - shown a letter, pick the matching symbol
-// Symbols are drawn as inline SVGs from SGA_GLYPHS (sga-glyphs.js),
-// traced from a reference chart, so no external font is needed.
-// ============================================================
-
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 function svgFor(letter, extraClass) {
   const g = SGA_GLYPHS[letter];
   if (!g) return "";
-  // Draw every rect as a subpath of ONE <path>, instead of separate
-  // <rect> elements. Adjacent rects that merely touch (no gap, no
-  // overlap) still get anti-aliased individually by the renderer,
-  // which shows up as faint seam lines between them. A single path
-  // is filled as one shape, so there's nothing for the renderer to
-  // seam.
   const d = g.r.map(([x, y, w, h]) => `M${x} ${y}h${w}v${h}h${-w}Z`).join("");
   return `<svg class="sga-svg${extraClass ? " " + extraClass : ""}" viewBox="0 0 ${g.w} ${g.h}" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
 }
 
-// QWERTY layout so the answer grid always sits in the same shape
-// as the other games' keyboards, whichever direction we're quizzing.
 const KEY_ROWS = [
   ["Q","W","E","R","T","Y","U","I","O","P"],
   ["A","S","D","F","G","H","J","K","L"],
@@ -165,8 +147,6 @@ chartToggle.addEventListener("click", () => {
   chartToggle.textContent = showing ? "Show the full A-Z key" : "Hide the A-Z key";
 });
 
-// Keyboard shortcut: typing a letter answers directly in Symbol -> Letter
-// mode, where every A-Z key already corresponds to a visible answer key.
 document.addEventListener("keydown", (e) => {
   if (state.mode !== "toLetter") return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;

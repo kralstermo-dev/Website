@@ -1,9 +1,3 @@
-// ============================================================
-// Popular character tags + approximate post counts on rule34.xxx
-// Counts are snapshots (not live).
-// img = SFW avatar (DiceBear initials). Letter fallback if load fails.
-// ============================================================
-
 const CHARACTERS = [
   { name: "2B", tag: "2b_(nier)", count: 185000, img: "https://api.dicebear.com/9.x/initials/svg?seed=2B&backgroundColor=9d6271&fontWeight=700&fontSize=42" },
   { name: "Asuka Langley", tag: "souryuu_asuka_langley", count: 92000, img: "https://api.dicebear.com/9.x/initials/svg?seed=Asuka%20Langley&backgroundColor=793d52&fontWeight=700&fontSize=42" },

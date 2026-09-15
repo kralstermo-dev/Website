@@ -1,14 +1,3 @@
-// ============================================================
-// CONNECTIONS - puzzle data
-// Each puzzle has 4 categories of 4 words, ordered easiest -> trickiest
-// (this controls which color banner a category gets when solved).
-// No word should appear in more than one category within the same
-// puzzle. Add more puzzles any time - the game picks one deterministically
-// based on today's date, so everyone gets the same puzzle on the same day.
-// A puzzle may have at most one "___ X" fill-in-the-blank category;
-// it's fine for a puzzle to have none.
-// ============================================================
-
 // ------------------------------------------------------------
 //  {
 //      categories: [
